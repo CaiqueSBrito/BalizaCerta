@@ -14,7 +14,8 @@ const Footer = () => {
               </span>
             </div>
             <p className="text-primary-foreground/70 max-w-sm">
-              Conectando alunos a instrutores de trânsito qualificados para uma experiência de aprendizado segura e eficiente.
+              Conectando alunos a instrutores de trânsito qualificados para uma experiência de aprendizado segura e
+              eficiente.
             </p>
           </div>
 
@@ -22,7 +23,7 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-primary-foreground mb-4">Links</h4>
             <ul className="space-y-2">
-              {['Como Funciona', 'Para Instrutores', 'Preços', 'Blog'].map((link) => (
+              {["Como Funciona", "Para Instrutores", "Preços", "Blog"].map((link) => (
                 <li key={link}>
                   <a href="#" className="text-primary-foreground/70 hover:text-accent transition-colors">
                     {link}
@@ -36,7 +37,7 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-primary-foreground mb-4">Suporte</h4>
             <ul className="space-y-2">
-              {['Central de Ajuda', 'Termos de Uso', 'Política de Privacidade', 'Contato'].map((link) => (
+              {["Central de Ajuda", "Termos de Uso", "Política de Privacidade", "Contato"].map((link) => (
                 <li key={link}>
                   <a href="#" className="text-primary-foreground/70 hover:text-accent transition-colors">
                     {link}
@@ -50,20 +51,18 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-primary-foreground/20 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-primary-foreground/60 text-sm">
-              © 2024 BalizaCerta. Todos os direitos reservados.
-            </p>
+            <p className="text-primary-foreground/60 text-sm">© 2026 BalizaCerta. Todos os direitos reservados.</p>
             <div className="flex items-center gap-4">
               {/* Social Icons */}
-              {['Instagram', 'Facebook', 'LinkedIn'].map((social) => (
-                <a 
+              {["Instagram", "Facebook", "LinkedIn"].map((social) => (
+                <a
                   key={social}
-                  href="#" 
+                  href="#"
                   className="w-10 h-10 rounded-full bg-primary-foreground/10 flex items-center justify-center text-primary-foreground/70 hover:bg-accent hover:text-accent-foreground transition-all"
                 >
                   <span className="sr-only">{social}</span>
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/>
+                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" />
                   </svg>
                 </a>
               ))}
