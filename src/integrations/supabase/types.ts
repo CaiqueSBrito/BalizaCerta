@@ -14,7 +14,143 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      connections: {
+        Row: {
+          contacted_at: string
+          id: string
+          instructor_id: string
+          student_id: string
+        }
+        Insert: {
+          contacted_at?: string
+          id?: string
+          instructor_id: string
+          student_id: string
+        }
+        Update: {
+          contacted_at?: string
+          id?: string
+          instructor_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connections_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connections_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructors: {
+        Row: {
+          bio: string | null
+          city: string | null
+          cnh_category: Database["public"]["Enums"]["cnh_category"][]
+          cnh_years: number
+          created_at: string
+          has_vehicle: boolean
+          id: string
+          is_active: boolean | null
+          is_verified: boolean | null
+          plan: Database["public"]["Enums"]["instructor_plan"]
+          price_per_hour: number
+          profile_id: string
+          rating: number | null
+          review_count: number | null
+          specialties: string[] | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          bio?: string | null
+          city?: string | null
+          cnh_category?: Database["public"]["Enums"]["cnh_category"][]
+          cnh_years?: number
+          created_at?: string
+          has_vehicle?: boolean
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          plan?: Database["public"]["Enums"]["instructor_plan"]
+          price_per_hour?: number
+          profile_id: string
+          rating?: number | null
+          review_count?: number | null
+          specialties?: string[] | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bio?: string | null
+          city?: string | null
+          cnh_category?: Database["public"]["Enums"]["cnh_category"][]
+          cnh_years?: number
+          created_at?: string
+          has_vehicle?: boolean
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          plan?: Database["public"]["Enums"]["instructor_plan"]
+          price_per_hour?: number
+          profile_id?: string
+          rating?: number | null
+          review_count?: number | null
+          specialties?: string[] | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructors_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          updated_at: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id: string
+          phone?: string | null
+          updated_at?: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +159,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      cnh_category: "A" | "B" | "AB" | "C" | "D" | "E"
+      instructor_plan: "free" | "pro"
+      user_type: "student" | "instructor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +288,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      cnh_category: ["A", "B", "AB", "C", "D", "E"],
+      instructor_plan: ["free", "pro"],
+      user_type: ["student", "instructor"],
+    },
   },
 } as const

@@ -2,6 +2,7 @@ import { Star, BadgeCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface InstructorCardProps {
+  id?: string;
   name: string;
   photo: string;
   rating: number;
@@ -9,9 +10,11 @@ interface InstructorCardProps {
   pricePerHour: number;
   specialties: string[];
   location: string;
+  isVerified?: boolean;
 }
 
 const InstructorCard = ({
+  id,
   name,
   photo,
   rating,
@@ -19,6 +22,7 @@ const InstructorCard = ({
   pricePerHour,
   specialties,
   location,
+  isVerified = false,
 }: InstructorCardProps) => {
   return (
     <div className="bg-card rounded-2xl overflow-hidden shadow-card card-hover border border-border">
@@ -31,11 +35,12 @@ const InstructorCard = ({
             className="w-full h-full object-cover"
           />
         </div>
-        {/* Verified Badge */}
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-verified text-verified-foreground px-3 py-1.5 rounded-full text-xs font-semibold shadow-md">
-          <BadgeCheck size={14} />
-          Credenciado DETRAN
-        </div>
+        {isVerified && (
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-verified text-verified-foreground px-3 py-1.5 rounded-full text-xs font-semibold shadow-md">
+            <BadgeCheck size={14} />
+            Credenciado DETRAN
+          </div>
+        )}
       </div>
 
       {/* Card Content */}
