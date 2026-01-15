@@ -22,7 +22,7 @@ const plans = [
   },
   {
     name: "PRO",
-    price: "R$ 49",
+    price: "R$ 39",
     period: "/mês",
     description: "Para profissionais de elite",
     popular: true,
