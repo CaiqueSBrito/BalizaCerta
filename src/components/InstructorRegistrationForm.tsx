@@ -90,11 +90,14 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
       const cleanCPF = data.cpf.replace(/[^\d]/g, '');
       const cleanWhatsApp = data.whatsapp.replace(/[^\d]/g, '');
 
+      console.log('[InstructorRegistration] Iniciando cadastro para:', data.email);
+
       // Criar usuário no Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             first_name: data.firstName,
             last_name: data.lastName,
@@ -106,11 +109,37 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
       });
 
       if (authError) {
+        console.error('[InstructorRegistration] Auth error:', authError);
         throw new Error(authError.message);
       }
 
       if (!authData.user) {
         throw new Error('Erro ao criar usuário');
+      }
+
+      const userId = authData.user.id;
+      console.log('[InstructorRegistration] Usuário criado com ID:', userId);
+
+      // Aguardar a sessão estar ativa (necessário para RLS funcionar)
+      // O signUp pode retornar antes da sessão estar completamente ativa
+      let sessionActive = false;
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      while (!sessionActive && attempts < maxAttempts) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user?.id === userId) {
+          sessionActive = true;
+          console.log('[InstructorRegistration] Sessão ativa confirmada');
+        } else {
+          attempts++;
+          console.log(`[InstructorRegistration] Aguardando sessão... tentativa ${attempts}/${maxAttempts}`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      if (!sessionActive) {
+        console.warn('[InstructorRegistration] Sessão não confirmada, continuando mesmo assim...');
       }
 
       // Atualizar perfil com CPF (campo sensível)
@@ -120,34 +149,53 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
           cpf: cleanCPF,
           whatsapp: cleanWhatsApp,
         })
-        .eq('id', authData.user.id);
+        .eq('id', userId);
 
       if (profileError) {
-        console.error('Profile update error:', profileError);
+        console.error('[InstructorRegistration] Profile update error:', profileError);
+        // Não lançar erro aqui pois o perfil foi criado pelo trigger
+      } else {
+        console.log('[InstructorRegistration] Perfil atualizado com CPF e WhatsApp');
       }
+
+      // Preparar dados do instrutor para inserção
+      const instructorData = {
+        profile_id: userId,
+        bio: data.bio || null,
+        price_per_hour: data.pricePerHour || 0,
+        cnh_category: data.cnhCategory as ("A" | "B" | "C" | "D" | "E")[],
+        cnh_years: data.cnhYears,
+        has_vehicle: data.hasVehicle,
+        city: data.city || null,
+        state: data.state ? data.state.toUpperCase() : null,
+        specialties: data.specialties || [],
+        detran_certificate: data.detranCertificate || null,
+        plan: 'free' as const,
+        is_active: true,
+        is_verified: false,
+      };
+
+      console.log('[InstructorRegistration] Inserindo dados do instrutor:', instructorData);
 
       // Criar registro do instrutor
-      const { error: instructorError } = await supabase
+      const { data: insertedInstructor, error: instructorError } = await supabase
         .from('instructors')
-        .insert({
-          profile_id: authData.user.id,
-          bio: data.bio || null,
-          price_per_hour: data.pricePerHour || 0,
-          cnh_category: data.cnhCategory,
-          cnh_years: data.cnhYears,
-          has_vehicle: data.hasVehicle,
-          city: data.city,
-          state: data.state.toUpperCase(),
-          specialties: data.specialties || [],
-          detran_certificate: data.detranCertificate,
-          plan: 'free',
-          is_active: true,
-          is_verified: false,
-        });
+        .insert(instructorData)
+        .select()
+        .single();
 
       if (instructorError) {
-        throw new Error(instructorError.message);
+        console.error('[InstructorRegistration] Instructor insert error:', instructorError);
+        console.error('[InstructorRegistration] Error details:', {
+          message: instructorError.message,
+          details: instructorError.details,
+          hint: instructorError.hint,
+          code: instructorError.code,
+        });
+        throw new Error(`Erro ao salvar dados do instrutor: ${instructorError.message}`);
       }
+
+      console.log('[InstructorRegistration] Instrutor criado com sucesso:', insertedInstructor);
 
       toast.success('Cadastro realizado com sucesso!', {
         description: 'Sua credencial será analisada e seu perfil estará disponível em breve.',
@@ -155,6 +203,7 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
       form.reset();
       onSuccess?.();
     } catch (error) {
+      console.error('[InstructorRegistration] Erro no cadastro:', error);
       const message = error instanceof Error ? error.message : 'Erro ao cadastrar';
       toast.error(message);
     } finally {
