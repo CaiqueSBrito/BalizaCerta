@@ -17,15 +17,20 @@ export interface Instructor {
   specialties: string[];
   is_verified: boolean;
   is_active: boolean;
+  detran_certificate: string | null;
   created_at: string;
   updated_at: string;
   profiles: {
     id: string;
+    first_name: string | null;
+    last_name: string | null;
     full_name: string;
     email: string;
     user_type: string;
     avatar_url: string | null;
     phone: string | null;
+    whatsapp: string | null;
+    // CPF não é retornado por segurança
   };
 }
 
@@ -36,14 +41,30 @@ export const useInstructors = (limit?: number) => {
       let query = supabase
         .from('instructors')
         .select(`
-          *,
+          id,
+          profile_id,
+          bio,
+          price_per_hour,
+          cnh_category,
+          cnh_years,
+          has_vehicle,
+          plan,
+          city,
+          state,
+          rating,
+          review_count,
+          specialties,
+          is_verified,
+          is_active,
+          created_at,
           profiles (
             id,
+            first_name,
+            last_name,
             full_name,
-            email,
             user_type,
             avatar_url,
-            phone
+            whatsapp
           )
         `)
         .eq('is_active', true)
@@ -72,14 +93,31 @@ export const useInstructor = (id: string) => {
       const { data, error } = await supabase
         .from('instructors')
         .select(`
-          *,
+          id,
+          profile_id,
+          bio,
+          price_per_hour,
+          cnh_category,
+          cnh_years,
+          has_vehicle,
+          plan,
+          city,
+          state,
+          rating,
+          review_count,
+          specialties,
+          is_verified,
+          is_active,
+          detran_certificate,
+          created_at,
           profiles (
             id,
+            first_name,
+            last_name,
             full_name,
-            email,
             user_type,
             avatar_url,
-            phone
+            whatsapp
           )
         `)
         .eq('id', id)
