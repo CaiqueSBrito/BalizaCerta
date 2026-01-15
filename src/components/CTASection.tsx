@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 
@@ -45,11 +46,14 @@ const CTASection = () => {
                 </ul>
 
                 <Button
+                  asChild
                   size="lg"
                   className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold text-base h-14 px-8 shadow-lg hover:shadow-xl transition-all group"
                 >
-                  Cadastre-se como Instrutor
-                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
+                  <Link to="/cadastro-instrutor">
+                    Cadastre-se como Instrutor
+                    <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
+                  </Link>
                 </Button>
               </div>
 
