@@ -13,6 +13,9 @@ import CadastroSucesso from "./pages/CadastroSucesso";
 import Cadastro from "./pages/Cadastro";
 import CadastroAluno from "./pages/CadastroAluno";
 import AuthCallback from "./pages/AuthCallback";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +37,15 @@ const App = () => (
             <Route path="/cadastro-instrutor" element={<InstructorRegister />} />
             <Route path="/cadastro-sucesso" element={<CadastroSucesso />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/login" element={<Login />} />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute requiredUserType="instructor">
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
