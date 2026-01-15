@@ -1,11 +1,11 @@
-import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 const benefits = [
-  'Alcance milhares de alunos na sua região',
-  'Gerencie sua agenda com facilidade',
-  'Receba pagamentos de forma segura',
-  'Aumente sua renda mensal',
+  "Alcance milhares de alunos na sua região",
+  "Gerencie sua agenda com facilidade",
+  "Receba pagamentos de forma segura",
+  "Aumente sua renda mensal",
 ];
 
 const CTASection = () => {
@@ -24,13 +24,14 @@ const CTASection = () => {
                 <span className="inline-block bg-accent/20 text-accent px-4 py-1.5 rounded-full text-sm font-semibold mb-6">
                   Para Instrutores
                 </span>
-                
+
                 <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-6">
                   Seja um instrutor parceiro e aumente sua renda
                 </h2>
-                
+
                 <p className="text-primary-foreground/80 text-lg mb-8">
-                  Cadastre-se gratuitamente e comece a receber solicitações de aulas particulares de alunos da sua região.
+                  Cadastre-se gratuitamente e comece a receber solicitações de aulas particulares de alunos da sua
+                  região.
                 </p>
 
                 {/* Benefits List */}
@@ -43,7 +44,7 @@ const CTASection = () => {
                   ))}
                 </ul>
 
-                <Button 
+                <Button
                   size="lg"
                   className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold text-base h-14 px-8 shadow-lg hover:shadow-xl transition-all group"
                 >
@@ -55,21 +56,17 @@ const CTASection = () => {
               {/* Stats */}
               <div className="grid grid-cols-2 gap-6">
                 {[
-                  { value: '500+', label: 'Instrutores ativos' },
-                  { value: '10k+', label: 'Aulas realizadas' },
-                  { value: '4.8', label: 'Avaliação média' },
-                  { value: '98%', label: 'Satisfação' },
+                  { value: "10+", label: "Instrutores ativos" },
+                  { value: "200+", label: "Aulas realizadas" },
+                  { value: "4.8", label: "Avaliação média" },
+                  { value: "98%", label: "Satisfação" },
                 ].map((stat) => (
-                  <div 
+                  <div
                     key={stat.label}
                     className="bg-primary-foreground/10 backdrop-blur-sm rounded-2xl p-6 text-center"
                   >
-                    <p className="text-3xl md:text-4xl font-bold text-accent mb-2">
-                      {stat.value}
-                    </p>
-                    <p className="text-primary-foreground/70 text-sm">
-                      {stat.label}
-                    </p>
+                    <p className="text-3xl md:text-4xl font-bold text-accent mb-2">{stat.value}</p>
+                    <p className="text-primary-foreground/70 text-sm">{stat.label}</p>
                   </div>
                 ))}
               </div>
