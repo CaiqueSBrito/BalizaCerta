@@ -76,7 +76,7 @@ const FeaturesDetailSection = () => {
           <p className="text-muted-foreground text-lg">Ferramentas profissionais para elevar sua qualidade de ensino</p>
         </div>
 
-        <div className="space-y-12 max-w-5xl mx-auto">
+        <div className="space-y-20 max-w-5xl mx-auto">
           {features.map((feature, index) => (
             <div
               key={feature.id}
