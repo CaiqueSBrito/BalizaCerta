@@ -149,7 +149,9 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
         throw new Error(instructorError.message);
       }
 
-      toast.success('Cadastro realizado com sucesso! Verifique seu email para confirmar.');
+      toast.success('Cadastro realizado com sucesso!', {
+        description: 'Sua credencial será analisada e seu perfil estará disponível em breve.',
+      });
       form.reset();
       onSuccess?.();
     } catch (error) {

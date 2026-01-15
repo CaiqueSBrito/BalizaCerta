@@ -1,10 +1,16 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import InstructorRegistrationForm from '@/components/InstructorRegistrationForm';
 
 const InstructorRegister = () => {
+  const navigate = useNavigate();
+
+  const handleSuccess = () => {
+    navigate('/cadastro-sucesso');
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -33,7 +39,7 @@ const InstructorRegister = () => {
 
             {/* Form Card */}
             <div className="bg-card border border-border rounded-xl p-6 md:p-8 shadow-sm">
-              <InstructorRegistrationForm />
+              <InstructorRegistrationForm onSuccess={handleSuccess} />
             </div>
 
             {/* Already have account */}
