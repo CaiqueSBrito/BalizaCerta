@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
@@ -55,6 +56,7 @@ interface InstructorRegistrationFormProps {
 }
 
 const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormProps) => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -110,6 +112,31 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
 
       if (authError) {
         console.error('[InstructorRegistration] Auth error:', authError);
+        
+        // Tratar erros específicos de autenticação
+        if (authError.message.includes('User already registered') || 
+            authError.message.includes('already been registered')) {
+          toast.error('Este e-mail já está cadastrado', {
+            description: 'Tente fazer login ou use outro e-mail.',
+          });
+          return;
+        }
+        
+        if (authError.message.includes('Password') || 
+            authError.message.includes('password')) {
+          toast.error('Senha inválida', {
+            description: 'A senha deve ter no mínimo 6 caracteres.',
+          });
+          return;
+        }
+        
+        if (authError.message.includes('email')) {
+          toast.error('E-mail inválido', {
+            description: 'Por favor, verifique o formato do e-mail.',
+          });
+          return;
+        }
+        
         throw new Error(authError.message);
       }
 
@@ -198,10 +225,19 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
       console.log('[InstructorRegistration] Instrutor criado com sucesso:', insertedInstructor);
 
       toast.success('Cadastro realizado com sucesso!', {
-        description: 'Sua credencial será analisada e seu perfil estará disponível em breve.',
+        description: 'Você foi logado automaticamente. Redirecionando...',
       });
+      
       form.reset();
-      onSuccess?.();
+      
+      // Redirecionar após cadastro bem-sucedido
+      // O usuário já está logado automaticamente pelo signUp
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        // Redirecionar para a home ou painel do instrutor
+        navigate('/');
+      }
     } catch (error) {
       console.error('[InstructorRegistration] Erro no cadastro:', error);
       const message = error instanceof Error ? error.message : 'Erro ao cadastrar';
