@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -14,9 +14,31 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    // Se já estiver logado, evita mostrar a tela de login.
+    const redirectIfLoggedIn = async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      if (!session) return;
+
+      // Se tiver perfil de instrutor, vai direto para o dashboard.
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (profile?.user_type === 'instructor') {
+        navigate('/dashboard', { replace: true });
+      }
+    };
+
+    redirectIfLoggedIn();
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error('Por favor, preencha todos os campos');
       return;
@@ -31,8 +53,6 @@ const Login = () => {
       });
 
       if (authError) {
-        console.error('[Login] Erro de autenticação:', authError);
-        
         if (authError.message.includes('Invalid login credentials')) {
           toast.error('Credenciais inválidas', {
             description: 'E-mail ou senha incorretos. Verifique seus dados e tente novamente.',
@@ -56,24 +76,53 @@ const Login = () => {
         return;
       }
 
-      // Verificar se o usuário é instrutor
-      const { data: profile, error: profileError } = await supabase
+      const userId = authData.user.id;
+
+      // 1) Buscar perfil; se não existir, cria (isso corrige usuários antigos sem profile)
+      const { data: existingProfile, error: profileFetchError } = await supabase
         .from('profiles')
         .select('user_type')
-        .eq('id', authData.user.id)
-        .single();
+        .eq('id', userId)
+        .maybeSingle();
 
-      if (profileError) {
-        console.error('[Login] Erro ao buscar perfil:', profileError);
-        // Se não encontrou perfil, pode ser que ainda não foi criado
-        toast.error('Perfil não encontrado', {
-          description: 'Houve um problema ao carregar seu perfil. Tente novamente.',
-        });
+      if (profileFetchError) {
+        toast.error('Erro ao carregar perfil', { description: profileFetchError.message });
         await supabase.auth.signOut();
         return;
       }
 
-      if (profile.user_type === 'student') {
+      let userType = existingProfile?.user_type;
+
+      if (!existingProfile) {
+        const meta = authData.user.user_metadata ?? {};
+        const firstName = typeof meta.first_name === 'string' ? meta.first_name : '';
+        const lastName = typeof meta.last_name === 'string' ? meta.last_name : '';
+        const fullName = `${firstName} ${lastName}`.trim() || authData.user.email || 'Usuário';
+
+        const metaUserType = meta.user_type === 'instructor' ? 'instructor' : 'student';
+
+        const { error: createProfileError } = await supabase.from('profiles').insert({
+          id: userId,
+          email: authData.user.email || email,
+          full_name: fullName,
+          first_name: firstName || null,
+          last_name: lastName || null,
+          user_type: metaUserType,
+          whatsapp: typeof meta.whatsapp === 'string' ? meta.whatsapp : null,
+          age: typeof meta.age === 'number' ? meta.age : null,
+        });
+
+        if (createProfileError) {
+          toast.error('Não foi possível criar seu perfil', { description: createProfileError.message });
+          await supabase.auth.signOut();
+          return;
+        }
+
+        userType = metaUserType;
+      }
+
+      // 2) Bloquear aluno na área do instrutor
+      if (userType === 'student') {
         toast.error('Área exclusiva para instrutores', {
           description: 'Esta área é exclusiva para instrutores. Alunos podem acessar seus recursos na Home.',
         });
@@ -81,14 +130,32 @@ const Login = () => {
         return;
       }
 
-      // É instrutor - redirecionar para o dashboard
+      // 3) Se for instrutor, garantir que o cadastro esteja completo
+      const { data: instructorRow, error: instructorError } = await supabase
+        .from('instructors')
+        .select('id')
+        .eq('profile_id', userId)
+        .maybeSingle();
+
+      if (instructorError) {
+        toast.error('Erro ao carregar dados do instrutor', { description: instructorError.message });
+        return;
+      }
+
+      if (!instructorRow) {
+        toast.info('Complete seu cadastro', {
+          description: 'Encontramos sua conta, mas faltam dados do instrutor. Complete o cadastro para continuar.',
+        });
+        navigate('/cadastro-instrutor');
+        return;
+      }
+
       toast.success('Login realizado com sucesso!', {
         description: 'Bem-vindo de volta!',
       });
-      navigate('/dashboard');
 
+      navigate('/dashboard');
     } catch (error) {
-      console.error('[Login] Erro inesperado:', error);
       toast.error('Erro inesperado', {
         description: 'Ocorreu um erro ao processar o login. Tente novamente.',
       });

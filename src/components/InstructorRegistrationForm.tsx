@@ -86,212 +86,231 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
 
   const onSubmit = async (data: InstructorRegistrationData) => {
     setIsLoading(true);
-    
-    try {
-      // Verificar se o cliente Supabase está inicializado
-      console.log('[InstructorRegistration] Verificando cliente Supabase...');
-      if (!supabase) {
-        throw new Error('Cliente Supabase não inicializado');
-      }
-      console.log('[InstructorRegistration] Cliente Supabase OK');
 
+    try {
       // Limpar formatação do CPF e WhatsApp antes de enviar
       const cleanCPF = data.cpf.replace(/[^\d]/g, '');
       const cleanWhatsApp = data.whatsapp.replace(/[^\d]/g, '');
+      const fullName = `${data.firstName.trim()} ${data.lastName.trim()}`.trim() || data.email.trim();
 
-      console.log('[InstructorRegistration] Iniciando cadastro para:', data.email);
+      const ensureInstructorProfile = async (userId: string) => {
+        // Se o usuário já tiver perfil como aluno, não “promover” silenciosamente.
+        const { data: existingProfile, error: existingProfileError } = await supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('id', userId)
+          .maybeSingle();
 
-      // Criar usuário no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            first_name: data.firstName,
-            last_name: data.lastName,
-            user_type: 'instructor',
-            whatsapp: cleanWhatsApp,
-            age: data.age,
-          },
-        },
-      });
+        if (existingProfileError) {
+          throw new Error(`Erro ao verificar perfil: ${existingProfileError.message}`);
+        }
 
-      if (authError) {
-        console.error('[InstructorRegistration] Auth error:', authError);
-        
-        // Tratar erros específicos de autenticação
-        if (authError.message.includes('User already registered') || 
-            authError.message.includes('already been registered')) {
-          toast.error('Este e-mail já está cadastrado', {
-            description: 'Tente fazer login ou use outro e-mail.',
+        if (existingProfile?.user_type === 'student') {
+          toast.error('Esta área é exclusiva para instrutores', {
+            description: 'Alunos podem acessar seus recursos na Home.',
           });
-          return;
+          await supabase.auth.signOut();
+          return false;
         }
-        
-        if (authError.message.includes('Password') || 
-            authError.message.includes('password')) {
-          toast.error('Senha inválida', {
-            description: 'A senha deve ter no mínimo 6 caracteres.',
-          });
-          return;
+
+        const { error: upsertProfileError } = await supabase
+          .from('profiles')
+          .upsert(
+            {
+              id: userId,
+              email: data.email.trim(),
+              full_name: fullName,
+              first_name: data.firstName.trim(),
+              last_name: data.lastName.trim(),
+              user_type: 'instructor',
+              whatsapp: cleanWhatsApp,
+              age: data.age,
+              cpf: cleanCPF,
+            },
+            { onConflict: 'id' }
+          );
+
+        if (upsertProfileError) {
+          throw new Error(`Erro ao salvar perfil: ${upsertProfileError.message}`);
         }
-        
-        if (authError.message.includes('email')) {
-          toast.error('E-mail inválida', {
-            description: 'Por favor, verifique o formato do e-mail.',
-          });
-          return;
-        }
-        
-        throw new Error(authError.message);
-      }
 
-      if (!authData.user) {
-        throw new Error('Erro ao criar usuário');
-      }
-
-      const userId = authData.user.id;
-      console.log('[InstructorRegistration] Usuário criado com ID:', userId);
-
-      // Verificar se temos uma sessão ativa (pode não existir se email confirmation estiver habilitado)
-      let session = authData.session;
-      
-      if (!session) {
-        console.log('[InstructorRegistration] Sem sessão imediata. Aguardando sessão...');
-        
-        // Aguardar a sessão estar ativa
-        let attempts = 0;
-        const maxAttempts = 15;
-        
-        while (!session && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData?.session?.user?.id === userId) {
-            session = sessionData.session;
-            console.log('[InstructorRegistration] Sessão ativa confirmada após espera');
-          } else {
-            attempts++;
-            console.log(`[InstructorRegistration] Aguardando sessão... tentativa ${attempts}/${maxAttempts}`);
-          }
-        }
-      } else {
-        console.log('[InstructorRegistration] Sessão ativa imediatamente');
-      }
-
-      // Se não temos sessão, pode ser que a confirmação de email esteja habilitada
-      if (!session) {
-        console.log('[InstructorRegistration] Sem sessão - email confirmation pode estar habilitado');
-        toast.info('Confirme seu e-mail', {
-          description: 'Enviamos um link de confirmação para seu e-mail. Por favor, confirme para completar o cadastro.',
-          duration: 10000,
-        });
-        form.reset();
-        return;
-      }
-
-      // Atualizar perfil com CPF (campo sensível)
-      console.log('[InstructorRegistration] Atualizando perfil...');
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          cpf: cleanCPF,
-          whatsapp: cleanWhatsApp,
-        })
-        .eq('id', userId);
-
-      if (profileError) {
-        console.error('[InstructorRegistration] Profile update error:', profileError);
-        // Não lançar erro aqui pois o perfil foi criado pelo trigger
-      } else {
-        console.log('[InstructorRegistration] Perfil atualizado com CPF e WhatsApp');
-      }
-
-      // Preparar dados do instrutor para inserção
-      const instructorData = {
-        profile_id: userId,
-        bio: data.bio || null,
-        price_per_hour: data.pricePerHour || 0,
-        cnh_category: data.cnhCategory as ("A" | "B" | "C" | "D" | "E")[],
-        cnh_years: data.cnhYears,
-        has_vehicle: data.hasVehicle,
-        city: data.city || null,
-        state: data.state ? data.state.toUpperCase() : null,
-        specialties: data.specialties || [],
-        detran_certificate: data.detranCertificate || null,
-        plan: 'free' as const,
-        is_active: true,
-        is_verified: false,
+        return true;
       };
 
-      console.log('[InstructorRegistration] Inserindo dados do instrutor:', instructorData);
+      const saveInstructorData = async (userId: string) => {
+        const instructorData = {
+          profile_id: userId,
+          bio: data.bio || null,
+          price_per_hour: data.pricePerHour || 0,
+          cnh_category: data.cnhCategory as ("A" | "B" | "AB" | "C" | "D" | "E")[],
+          cnh_years: data.cnhYears,
+          has_vehicle: data.hasVehicle,
+          city: data.city || null,
+          state: data.state ? data.state.toUpperCase() : null,
+          specialties: data.specialties || [],
+          detran_certificate: data.detranCertificate || null,
+          plan: 'free' as const,
+          is_active: true,
+          is_verified: false,
+        };
 
-      // Criar registro do instrutor com retry para erros de rede
-      let insertedInstructor = null;
-      let instructorError = null;
-      let retryCount = 0;
-      const maxRetries = 3;
+        // Criar/atualizar registro do instrutor com retry para erros de rede
+        let insertedInstructor: any = null;
+        let instructorError: any = null;
+        let retryCount = 0;
+        const maxRetries = 3;
 
-      while (retryCount < maxRetries) {
-        try {
-          const result = await supabase
-            .from('instructors')
-            .insert(instructorData)
-            .select()
-            .single();
-          
-          if (result.error) {
-            instructorError = result.error;
-            console.error(`[InstructorRegistration] Tentativa ${retryCount + 1} falhou:`, result.error);
+        while (retryCount < maxRetries) {
+          try {
+            const insertResult = await supabase
+              .from('instructors')
+              .insert(instructorData)
+              .select()
+              .single();
+
+            if (!insertResult.error) {
+              insertedInstructor = insertResult.data;
+              instructorError = null;
+              break;
+            }
+
+            // Se já existir (ex: usuário está completando cadastro), tentar UPDATE
+            if (insertResult.error.code === '23505') {
+              const updateResult = await supabase
+                .from('instructors')
+                .update(instructorData)
+                .eq('profile_id', userId)
+                .select()
+                .single();
+
+              if (updateResult.error) {
+                instructorError = updateResult.error;
+                retryCount++;
+                if (retryCount < maxRetries) await new Promise((r) => setTimeout(r, 1000));
+              } else {
+                insertedInstructor = updateResult.data;
+                instructorError = null;
+                break;
+              }
+            } else {
+              instructorError = insertResult.error;
+              retryCount++;
+              if (retryCount < maxRetries) await new Promise((r) => setTimeout(r, 1000));
+            }
+          } catch (fetchError) {
             retryCount++;
             if (retryCount < maxRetries) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise((r) => setTimeout(r, 1000));
+            } else {
+              instructorError = { message: 'Erro de conexão. Por favor, verifique sua internet e tente novamente.' };
             }
-          } else {
-            insertedInstructor = result.data;
-            instructorError = null;
-            break;
           }
-        } catch (fetchError) {
-          console.error(`[InstructorRegistration] Network error tentativa ${retryCount + 1}:`, fetchError);
-          retryCount++;
-          if (retryCount < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          } else {
-            instructorError = { message: 'Erro de conexão. Por favor, verifique sua internet e tente novamente.' };
+        }
+
+        if (instructorError) {
+          throw new Error(`Erro ao salvar dados do instrutor: ${instructorError.message}`);
+        }
+
+        return insertedInstructor;
+      };
+
+      // Se o usuário já está autenticado (ex: voltou do /auth/callback), só completa as tabelas.
+      const { data: sessionData } = await supabase.auth.getSession();
+      let session = sessionData.session;
+
+      // Caso não esteja logado, tentar cadastro
+      if (!session) {
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: {
+              first_name: data.firstName,
+              last_name: data.lastName,
+              user_type: 'instructor',
+              whatsapp: cleanWhatsApp,
+              age: data.age,
+            },
+          },
+        });
+
+        if (authError) {
+          if (
+            authError.message.includes('User already registered') ||
+            authError.message.includes('already been registered')
+          ) {
+            toast.error('Este e-mail já está cadastrado', {
+              description: 'Faça login para continuar (ou use “Esqueci minha senha”).',
+            });
+            navigate('/login');
+            return;
           }
+
+          if (authError.message.toLowerCase().includes('password')) {
+            toast.error('Senha inválida', {
+              description: 'A senha deve seguir os requisitos de segurança.',
+            });
+            return;
+          }
+
+          toast.error('Erro ao criar conta', { description: authError.message });
+          return;
+        }
+
+        // Caso clássico do Supabase: signup “ok” mas usuário já existe/confirmado (não reenvia email)
+        const identities = authData.user?.identities;
+        const isRepeatedSignup = Array.isArray(identities) && identities.length === 0;
+
+        if (isRepeatedSignup) {
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: data.email,
+            password: data.password,
+          });
+
+          if (signInError || !signInData.session) {
+            toast.error('Este e-mail já possui conta', {
+              description: 'A senha informada não confere. Use “Esqueci minha senha” para recuperar o acesso.',
+            });
+            navigate('/login');
+            return;
+          }
+
+          session = signInData.session;
+        } else {
+          session = authData.session;
+        }
+
+        // Se não temos sessão, provavelmente o Supabase está exigindo confirmação de e-mail
+        if (!session) {
+          toast.info('Confirme seu e-mail', {
+            description:
+              'Se este for seu primeiro cadastro, enviamos um link de confirmação para seu e-mail. Se você já tem conta, faça login para continuar.',
+            duration: 10000,
+          });
+          return;
         }
       }
 
-      if (instructorError) {
-        console.error('[InstructorRegistration] Instructor insert error:', instructorError);
-        console.error('[InstructorRegistration] Error details:', {
-          message: instructorError.message,
-          details: instructorError.details,
-          hint: instructorError.hint,
-          code: instructorError.code,
-        });
-        throw new Error(`Erro ao salvar dados do instrutor: ${instructorError.message}`);
-      }
+      const userId = session.user.id;
 
-      console.log('[InstructorRegistration] Instrutor criado com sucesso:', insertedInstructor);
+      const canContinue = await ensureInstructorProfile(userId);
+      if (!canContinue) return;
+
+      await saveInstructorData(userId);
 
       toast.success('Cadastro realizado com sucesso!', {
-        description: 'Você foi logado automaticamente. Redirecionando...',
+        description: 'Seu perfil de instrutor foi salvo. Redirecionando...',
       });
-      
+
       form.reset();
-      
-      // Redirecionar após cadastro bem-sucedido
-      // O usuário já está logado automaticamente pelo signUp
+
       if (onSuccess) {
         onSuccess();
       } else {
-        // Redirecionar para a home ou painel do instrutor
         navigate('/');
       }
     } catch (error) {
-      console.error('[InstructorRegistration] Erro no cadastro:', error);
       const message = error instanceof Error ? error.message : 'Erro ao cadastrar';
       toast.error(message);
     } finally {
