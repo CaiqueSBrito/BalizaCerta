@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Home } from 'lucide-react';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,6 +25,17 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
+            <Link 
+              to="/" 
+              className={`flex items-center gap-1.5 transition-colors font-medium ${
+                isActive('/') 
+                  ? 'text-accent' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Home size={18} />
+              Início
+            </Link>
             <a 
               href="#como-funciona" 
               className="text-muted-foreground hover:text-foreground transition-colors font-medium"
@@ -66,6 +77,18 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border animate-fade-in">
             <nav className="flex flex-col gap-4">
+              <Link 
+                to="/" 
+                className={`flex items-center gap-1.5 transition-colors font-medium py-2 ${
+                  isActive('/') 
+                    ? 'text-accent' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Home size={18} />
+                Início
+              </Link>
               <a 
                 href="#como-funciona" 
                 className="text-muted-foreground hover:text-foreground transition-colors font-medium py-2"
