@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Instrutores from "./pages/Instrutores";
+import InstructorProfile from "./pages/InstructorProfile";
 import InstructorPlans from "./pages/InstructorPlans";
 import InstructorRegister from "./pages/InstructorRegister";
 import NotFound from "./pages/NotFound";
@@ -20,6 +21,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/instrutores" element={<Instrutores />} />
+          <Route path="/instrutor/:id" element={<InstructorProfile />} />
           <Route path="/planos-instrutor" element={<InstructorPlans />} />
           <Route path="/cadastro-instrutor" element={<InstructorRegister />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
