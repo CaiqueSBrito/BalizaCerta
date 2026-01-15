@@ -1,19 +1,25 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Search, MapPin, Car } from 'lucide-react';
 
 const HeroSection = () => {
+  const navigate = useNavigate();
   const [searchCity, setSearchCity] = useState('');
   const [category, setCategory] = useState('');
 
   const categories = [
     { value: 'cnh-a', label: 'CNH A (Moto)' },
     { value: 'cnh-b', label: 'CNH B (Carro)' },
+    { value: 'cnh-ab', label: 'CNH AB' },
     { value: 'medo-dirigir', label: 'Medo de Dirigir' },
   ];
 
   const handleSearch = () => {
-    console.log('Buscando:', { searchCity, category });
+    const params = new URLSearchParams();
+    if (searchCity) params.set('cidade', searchCity);
+    if (category) params.set('categoria', category);
+    navigate(`/instrutores?${params.toString()}`);
   };
 
   return (
@@ -100,7 +106,10 @@ const HeroSection = () => {
             {['São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Curitiba'].map((city) => (
               <button 
                 key={city}
-                onClick={() => setSearchCity(city)}
+                onClick={() => {
+                  setSearchCity(city);
+                  navigate(`/instrutores?cidade=${encodeURIComponent(city)}`);
+                }}
                 className="px-4 py-1.5 bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground/90 rounded-full text-sm transition-colors"
               >
                 {city}
