@@ -1,7 +1,11 @@
 import InstructorCard from './InstructorCard';
+import { useInstructors } from '@/hooks/useInstructors';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const instructors = [
+// Dados de fallback caso não haja instrutores no banco
+const fallbackInstructors = [
   {
+    id: 'fallback-1',
     name: 'Carlos Silva',
     photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=face',
     rating: 4.9,
@@ -9,8 +13,10 @@ const instructors = [
     pricePerHour: 80,
     specialties: ['CNH B', 'Medo de Dirigir'],
     location: 'São Paulo, SP',
+    isVerified: true,
   },
   {
+    id: 'fallback-2',
     name: 'Ana Oliveira',
     photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=300&fit=crop&crop=face',
     rating: 4.8,
@@ -18,8 +24,10 @@ const instructors = [
     pricePerHour: 75,
     specialties: ['CNH A', 'CNH B'],
     location: 'Rio de Janeiro, RJ',
+    isVerified: true,
   },
   {
+    id: 'fallback-3',
     name: 'Roberto Santos',
     photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=300&fit=crop&crop=face',
     rating: 5.0,
@@ -27,10 +35,54 @@ const instructors = [
     pricePerHour: 90,
     specialties: ['CNH B', 'Baliza'],
     location: 'Belo Horizonte, MG',
+    isVerified: true,
   },
 ];
 
+const InstructorCardSkeleton = () => (
+  <div className="bg-card rounded-2xl overflow-hidden shadow-card border border-border">
+    <Skeleton className="aspect-[4/3] w-full" />
+    <div className="p-5 space-y-4">
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+      <Skeleton className="h-4 w-40" />
+      <div className="flex gap-2">
+        <Skeleton className="h-6 w-16 rounded-full" />
+        <Skeleton className="h-6 w-20 rounded-full" />
+      </div>
+      <div className="flex justify-between items-center pt-4 border-t border-border">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-10 w-24 rounded-md" />
+      </div>
+    </div>
+  </div>
+);
+
 const InstructorsSection = () => {
+  const { data: instructors, isLoading, error } = useInstructors(6);
+
+  // Mapear dados do Supabase para o formato do card
+  const mappedInstructors = instructors?.map((instructor) => ({
+    id: instructor.id,
+    name: instructor.profiles?.full_name || 'Instrutor',
+    photo: instructor.profiles?.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=face',
+    rating: Number(instructor.rating) || 0,
+    reviewCount: instructor.review_count || 0,
+    pricePerHour: Number(instructor.price_per_hour) || 0,
+    specialties: instructor.specialties || [],
+    location: instructor.city && instructor.state 
+      ? `${instructor.city}, ${instructor.state}` 
+      : 'Brasil',
+    isVerified: instructor.is_verified || false,
+  }));
+
+  // Usar dados de fallback se não houver instrutores
+  const displayInstructors = mappedInstructors && mappedInstructors.length > 0 
+    ? mappedInstructors 
+    : fallbackInstructors;
+
   return (
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
@@ -46,15 +98,34 @@ const InstructorsSection = () => {
 
         {/* Instructors Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {instructors.map((instructor, index) => (
-            <div 
-              key={instructor.name} 
-              className="animate-fade-in"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <InstructorCard {...instructor} />
-            </div>
-          ))}
+          {isLoading ? (
+            // Loading skeletons
+            [...Array(3)].map((_, index) => (
+              <InstructorCardSkeleton key={index} />
+            ))
+          ) : error ? (
+            // Em caso de erro, mostrar fallback
+            fallbackInstructors.map((instructor, index) => (
+              <div 
+                key={instructor.id} 
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <InstructorCard {...instructor} />
+              </div>
+            ))
+          ) : (
+            // Dados reais ou fallback
+            displayInstructors.map((instructor, index) => (
+              <div 
+                key={instructor.id} 
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <InstructorCard {...instructor} />
+              </div>
+            ))
+          )}
         </div>
 
         {/* View All Button */}
