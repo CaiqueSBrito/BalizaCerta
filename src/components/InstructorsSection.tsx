@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import InstructorCard from './InstructorCard';
 import { useInstructors } from '@/hooks/useInstructors';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -61,6 +62,7 @@ const InstructorCardSkeleton = () => (
 );
 
 const InstructorsSection = () => {
+  const navigate = useNavigate();
   const { data: instructors, isLoading, error } = useInstructors(6);
 
   // Mapear dados do Supabase para o formato do card
@@ -83,6 +85,7 @@ const InstructorsSection = () => {
         ? `${instructor.city}, ${instructor.state}` 
         : 'Brasil',
       isVerified: instructor.is_verified || false,
+      isPro: instructor.plan === 'pro',
     };
   });
 
@@ -105,7 +108,7 @@ const InstructorsSection = () => {
         </div>
 
         {/* Instructors Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto auto-rows-fr">
           {isLoading ? (
             // Loading skeletons
             [...Array(3)].map((_, index) => (
@@ -138,7 +141,10 @@ const InstructorsSection = () => {
 
         {/* View All Button */}
         <div className="text-center mt-12">
-          <button className="inline-flex items-center gap-2 text-primary font-semibold hover:text-primary/80 transition-colors group">
+          <button 
+            onClick={() => navigate('/instrutores')}
+            className="inline-flex items-center gap-2 text-primary font-semibold hover:text-primary/80 transition-colors group"
+          >
             Ver todos os instrutores
             <svg 
               className="w-5 h-5 group-hover:translate-x-1 transition-transform" 
