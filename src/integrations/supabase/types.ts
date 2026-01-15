@@ -214,6 +214,61 @@ export type Database = {
       }
     }
     Functions: {
+      get_instructor_by_id: {
+        Args: { p_instructor_id: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          city: string
+          cnh_category: Database["public"]["Enums"]["cnh_category"][]
+          cnh_years: number
+          created_at: string
+          detran_certificate: string
+          first_name: string
+          has_vehicle: boolean
+          id: string
+          is_active: boolean
+          is_verified: boolean
+          last_name: string
+          plan: Database["public"]["Enums"]["instructor_plan"]
+          price_per_hour: number
+          profile_id: string
+          rating: number
+          review_count: number
+          specialties: string[]
+          state: string
+          whatsapp_masked: string
+        }[]
+      }
+      get_instructor_whatsapp: {
+        Args: { p_instructor_id: string }
+        Returns: string
+      }
+      get_instructors_public: {
+        Args: { p_is_active?: boolean }
+        Returns: {
+          avatar_url: string
+          bio: string
+          city: string
+          cnh_category: Database["public"]["Enums"]["cnh_category"][]
+          cnh_years: number
+          created_at: string
+          first_name: string
+          has_vehicle: boolean
+          id: string
+          is_active: boolean
+          is_verified: boolean
+          last_name: string
+          plan: Database["public"]["Enums"]["instructor_plan"]
+          price_per_hour: number
+          profile_id: string
+          rating: number
+          review_count: number
+          specialties: string[]
+          state: string
+          whatsapp_masked: string
+        }[]
+      }
       validate_cpf: { Args: { cpf: string }; Returns: boolean }
       validate_whatsapp: { Args: { phone: string }; Returns: boolean }
     }

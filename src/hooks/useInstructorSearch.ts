@@ -13,6 +13,9 @@ export interface InstructorSearchFilters {
 export interface SearchInstructor {
   id: string;
   profile_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
   bio: string | null;
   price_per_hour: number;
   cnh_category: string[];
@@ -27,53 +30,31 @@ export interface SearchInstructor {
   is_verified: boolean;
   is_active: boolean;
   created_at: string;
-  profiles: {
-    id: string;
-    first_name: string | null;
-    last_name: string | null;
-    full_name: string;
-    avatar_url: string | null;
-    whatsapp: string | null;
-  };
+  whatsapp_masked: string;
 }
 
 export const useInstructorSearch = (filters: InstructorSearchFilters) => {
   return useQuery({
     queryKey: ['instructors-search', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('instructors')
-        .select(`
-          id,
-          profile_id,
-          bio,
-          price_per_hour,
-          cnh_category,
-          cnh_years,
-          has_vehicle,
-          plan,
-          city,
-          state,
-          rating,
-          review_count,
-          specialties,
-          is_verified,
-          is_active,
-          created_at,
-          profiles (
-            id,
-            first_name,
-            last_name,
-            full_name,
-            avatar_url,
-            whatsapp
-          )
-        `)
-        .eq('is_active', true);
+      // Use secure RPC function that returns only public data with masked WhatsApp
+      const { data, error } = await supabase.rpc('get_instructors_public', {
+        p_is_active: true
+      });
+
+      if (error) {
+        console.error('Error fetching instructors:', error);
+        throw error;
+      }
+
+      let filteredData = data as SearchInstructor[];
 
       // Filter by city (case-insensitive partial match)
       if (filters.city && filters.city.trim()) {
-        query = query.ilike('city', `%${filters.city.trim()}%`);
+        const citySearch = filters.city.trim().toLowerCase();
+        filteredData = filteredData.filter(
+          (instructor) => instructor.city?.toLowerCase().includes(citySearch)
+        );
       }
 
       // Filter by CNH category
@@ -87,36 +68,39 @@ export const useInstructorSearch = (filters: InstructorSearchFilters) => {
           'cnh-e': 'E',
         };
         const mappedCategory = categoryMap[filters.category.toLowerCase()] || filters.category.toUpperCase();
-        query = query.contains('cnh_category', [mappedCategory]);
+        filteredData = filteredData.filter(
+          (instructor) => instructor.cnh_category?.includes(mappedCategory)
+        );
       }
 
       // Filter by specialty
       if (filters.specialty && filters.specialty.trim()) {
-        query = query.contains('specialties', [filters.specialty]);
+        filteredData = filteredData.filter(
+          (instructor) => instructor.specialties?.includes(filters.specialty!)
+        );
       }
 
       // Filter by price range
       if (filters.minPrice !== undefined && filters.minPrice > 0) {
-        query = query.gte('price_per_hour', filters.minPrice);
+        filteredData = filteredData.filter(
+          (instructor) => instructor.price_per_hour >= filters.minPrice!
+        );
       }
       if (filters.maxPrice !== undefined && filters.maxPrice > 0) {
-        query = query.lte('price_per_hour', filters.maxPrice);
+        filteredData = filteredData.filter(
+          (instructor) => instructor.price_per_hour <= filters.maxPrice!
+        );
       }
 
       // Filter by minimum rating
       if (filters.minRating !== undefined && filters.minRating > 0) {
-        query = query.gte('rating', filters.minRating);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching instructors:', error);
-        throw error;
+        filteredData = filteredData.filter(
+          (instructor) => instructor.rating >= filters.minRating!
+        );
       }
 
       // Sort: PRO first, then by rating
-      const sortedData = (data as SearchInstructor[]).sort((a, b) => {
+      const sortedData = filteredData.sort((a, b) => {
         // PRO instructors first
         if (a.plan === 'pro' && b.plan !== 'pro') return -1;
         if (a.plan !== 'pro' && b.plan === 'pro') return 1;
@@ -134,45 +118,23 @@ export const useFeaturedInstructors = () => {
   return useQuery({
     queryKey: ['featured-instructors'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('instructors')
-        .select(`
-          id,
-          profile_id,
-          bio,
-          price_per_hour,
-          cnh_category,
-          cnh_years,
-          has_vehicle,
-          plan,
-          city,
-          state,
-          rating,
-          review_count,
-          specialties,
-          is_verified,
-          is_active,
-          created_at,
-          profiles (
-            id,
-            first_name,
-            last_name,
-            full_name,
-            avatar_url,
-            whatsapp
-          )
-        `)
-        .eq('is_active', true)
-        .eq('plan', 'pro')
-        .order('rating', { ascending: false })
-        .limit(6);
+      // Use secure RPC function that returns only public data with masked WhatsApp
+      const { data, error } = await supabase.rpc('get_instructors_public', {
+        p_is_active: true
+      });
 
       if (error) {
         console.error('Error fetching featured instructors:', error);
         throw error;
       }
 
-      return data as SearchInstructor[];
+      // Filter to PRO instructors, sort by rating, limit to 6
+      const proInstructors = (data as SearchInstructor[])
+        .filter((instructor) => instructor.plan === 'pro')
+        .sort((a, b) => b.rating - a.rating)
+        .slice(0, 6);
+
+      return proInstructors;
     },
   });
 };
