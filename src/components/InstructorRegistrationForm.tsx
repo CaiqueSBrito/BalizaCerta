@@ -106,7 +106,7 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             first_name: data.firstName,
             last_name: data.lastName,
