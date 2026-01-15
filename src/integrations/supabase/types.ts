@@ -42,6 +42,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "connections_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructors_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "connections_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
@@ -57,6 +64,7 @@ export type Database = {
           cnh_category: Database["public"]["Enums"]["cnh_category"][]
           cnh_years: number
           created_at: string
+          detran_certificate: string | null
           has_vehicle: boolean
           id: string
           is_active: boolean | null
@@ -76,6 +84,7 @@ export type Database = {
           cnh_category?: Database["public"]["Enums"]["cnh_category"][]
           cnh_years?: number
           created_at?: string
+          detran_certificate?: string | null
           has_vehicle?: boolean
           id?: string
           is_active?: boolean | null
@@ -95,6 +104,7 @@ export type Database = {
           cnh_category?: Database["public"]["Enums"]["cnh_category"][]
           cnh_years?: number
           created_at?: string
+          detran_certificate?: string | null
           has_vehicle?: boolean
           id?: string
           is_active?: boolean | null
@@ -120,43 +130,92 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age: number | null
           avatar_url: string | null
+          cpf: string | null
           created_at: string
           email: string
+          first_name: string | null
           full_name: string
           id: string
+          last_name: string | null
           phone: string | null
           updated_at: string
           user_type: Database["public"]["Enums"]["user_type"]
+          whatsapp: string | null
         }
         Insert: {
+          age?: number | null
           avatar_url?: string | null
+          cpf?: string | null
           created_at?: string
           email: string
+          first_name?: string | null
           full_name: string
           id: string
+          last_name?: string | null
           phone?: string | null
           updated_at?: string
           user_type?: Database["public"]["Enums"]["user_type"]
+          whatsapp?: string | null
         }
         Update: {
+          age?: number | null
           avatar_url?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string
+          first_name?: string | null
           full_name?: string
           id?: string
+          last_name?: string | null
           phone?: string | null
           updated_at?: string
           user_type?: Database["public"]["Enums"]["user_type"]
+          whatsapp?: string | null
         }
         Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      instructors_public: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          city: string | null
+          cnh_category: Database["public"]["Enums"]["cnh_category"][] | null
+          cnh_years: number | null
+          created_at: string | null
+          first_name: string | null
+          has_vehicle: boolean | null
+          id: string | null
+          is_active: boolean | null
+          is_verified: boolean | null
+          last_name: string | null
+          plan: Database["public"]["Enums"]["instructor_plan"] | null
+          price_per_hour: number | null
+          profile_id: string | null
+          rating: number | null
+          review_count: number | null
+          specialties: string[] | null
+          state: string | null
+          whatsapp: string | null
+          whatsapp_masked: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructors_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      validate_cpf: { Args: { cpf: string }; Returns: boolean }
+      validate_whatsapp: { Args: { phone: string }; Returns: boolean }
     }
     Enums: {
       cnh_category: "A" | "B" | "AB" | "C" | "D" | "E"
