@@ -88,6 +88,13 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
     setIsLoading(true);
     
     try {
+      // Verificar se o cliente Supabase está inicializado
+      console.log('[InstructorRegistration] Verificando cliente Supabase...');
+      if (!supabase) {
+        throw new Error('Cliente Supabase não inicializado');
+      }
+      console.log('[InstructorRegistration] Cliente Supabase OK');
+
       // Limpar formatação do CPF e WhatsApp antes de enviar
       const cleanCPF = data.cpf.replace(/[^\d]/g, '');
       const cleanWhatsApp = data.whatsapp.replace(/[^\d]/g, '');
@@ -131,7 +138,7 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
         }
         
         if (authError.message.includes('email')) {
-          toast.error('E-mail inválido', {
+          toast.error('E-mail inválida', {
             description: 'Por favor, verifique o formato do e-mail.',
           });
           return;
@@ -147,29 +154,44 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
       const userId = authData.user.id;
       console.log('[InstructorRegistration] Usuário criado com ID:', userId);
 
-      // Aguardar a sessão estar ativa (necessário para RLS funcionar)
-      // O signUp pode retornar antes da sessão estar completamente ativa
-      let sessionActive = false;
-      let attempts = 0;
-      const maxAttempts = 10;
+      // Verificar se temos uma sessão ativa (pode não existir se email confirmation estiver habilitado)
+      let session = authData.session;
       
-      while (!sessionActive && attempts < maxAttempts) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData?.session?.user?.id === userId) {
-          sessionActive = true;
-          console.log('[InstructorRegistration] Sessão ativa confirmada');
-        } else {
-          attempts++;
-          console.log(`[InstructorRegistration] Aguardando sessão... tentativa ${attempts}/${maxAttempts}`);
+      if (!session) {
+        console.log('[InstructorRegistration] Sem sessão imediata. Aguardando sessão...');
+        
+        // Aguardar a sessão estar ativa
+        let attempts = 0;
+        const maxAttempts = 15;
+        
+        while (!session && attempts < maxAttempts) {
           await new Promise(resolve => setTimeout(resolve, 500));
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session?.user?.id === userId) {
+            session = sessionData.session;
+            console.log('[InstructorRegistration] Sessão ativa confirmada após espera');
+          } else {
+            attempts++;
+            console.log(`[InstructorRegistration] Aguardando sessão... tentativa ${attempts}/${maxAttempts}`);
+          }
         }
+      } else {
+        console.log('[InstructorRegistration] Sessão ativa imediatamente');
       }
 
-      if (!sessionActive) {
-        console.warn('[InstructorRegistration] Sessão não confirmada, continuando mesmo assim...');
+      // Se não temos sessão, pode ser que a confirmação de email esteja habilitada
+      if (!session) {
+        console.log('[InstructorRegistration] Sem sessão - email confirmation pode estar habilitado');
+        toast.info('Confirme seu e-mail', {
+          description: 'Enviamos um link de confirmação para seu e-mail. Por favor, confirme para completar o cadastro.',
+          duration: 10000,
+        });
+        form.reset();
+        return;
       }
 
       // Atualizar perfil com CPF (campo sensível)
+      console.log('[InstructorRegistration] Atualizando perfil...');
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -204,12 +226,42 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
 
       console.log('[InstructorRegistration] Inserindo dados do instrutor:', instructorData);
 
-      // Criar registro do instrutor
-      const { data: insertedInstructor, error: instructorError } = await supabase
-        .from('instructors')
-        .insert(instructorData)
-        .select()
-        .single();
+      // Criar registro do instrutor com retry para erros de rede
+      let insertedInstructor = null;
+      let instructorError = null;
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          const result = await supabase
+            .from('instructors')
+            .insert(instructorData)
+            .select()
+            .single();
+          
+          if (result.error) {
+            instructorError = result.error;
+            console.error(`[InstructorRegistration] Tentativa ${retryCount + 1} falhou:`, result.error);
+            retryCount++;
+            if (retryCount < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          } else {
+            insertedInstructor = result.data;
+            instructorError = null;
+            break;
+          }
+        } catch (fetchError) {
+          console.error(`[InstructorRegistration] Network error tentativa ${retryCount + 1}:`, fetchError);
+          retryCount++;
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            instructorError = { message: 'Erro de conexão. Por favor, verifique sua internet e tente novamente.' };
+          }
+        }
+      }
 
       if (instructorError) {
         console.error('[InstructorRegistration] Instructor insert error:', instructorError);
