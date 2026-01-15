@@ -67,16 +67,16 @@ const InstructorsSection = () => {
 
   // Mapear dados do Supabase para o formato do card
   const mappedInstructors = instructors?.map((instructor) => {
-    const firstName = instructor.profiles?.first_name || '';
-    const lastName = instructor.profiles?.last_name || '';
+    const firstName = instructor.first_name || '';
+    const lastName = instructor.last_name || '';
     const displayName = firstName && lastName 
       ? `${firstName} ${lastName}` 
-      : instructor.profiles?.full_name || 'Instrutor';
+      : 'Instrutor';
     
     return {
       id: instructor.id,
       name: displayName,
-      photo: instructor.profiles?.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=face',
+      photo: instructor.avatar_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=face',
       rating: Number(instructor.rating) || 0,
       reviewCount: instructor.review_count || 0,
       pricePerHour: Number(instructor.price_per_hour) || 0,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Star, 
@@ -11,7 +11,6 @@ import {
   Clock, 
   CheckCircle2,
   ChevronLeft,
-  Phone,
   Shield,
   Award
 } from 'lucide-react';
@@ -19,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useInstructor } from '@/hooks/useInstructors';
+import { useInstructor, getInstructorWhatsApp } from '@/hooks/useInstructors';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -55,18 +54,23 @@ const InstructorProfile = () => {
   const [isContactLoading, setIsContactLoading] = useState(false);
 
   const handleWhatsAppContact = async () => {
-    if (!instructor?.profiles?.whatsapp) {
-      toast({
-        title: 'WhatsApp não disponível',
-        description: 'Este instrutor ainda não cadastrou seu WhatsApp.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!instructor) return;
 
     setIsContactLoading(true);
 
     try {
+      // Get WhatsApp via secure RPC function
+      const whatsapp = await getInstructorWhatsApp(instructor.id);
+      
+      if (!whatsapp) {
+        toast({
+          title: 'WhatsApp não disponível',
+          description: 'Este instrutor ainda não cadastrou seu WhatsApp.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -79,7 +83,7 @@ const InstructorProfile = () => {
       }
 
       // Format WhatsApp number
-      const phone = instructor.profiles.whatsapp.replace(/\D/g, '');
+      const phone = whatsapp.replace(/\D/g, '');
       const fullPhone = phone.startsWith('55') ? phone : `55${phone}`;
       
       // Create message
@@ -91,6 +95,11 @@ const InstructorProfile = () => {
       window.open(`https://wa.me/${fullPhone}?text=${message}`, '_blank');
     } catch (err) {
       console.error('Error registering connection:', err);
+      toast({
+        title: 'Erro',
+        description: 'Ocorreu um erro. Por favor, tente novamente.',
+        variant: 'destructive',
+      });
     } finally {
       setIsContactLoading(false);
     }
@@ -138,8 +147,10 @@ const InstructorProfile = () => {
   }
 
   const isPro = instructor.plan === 'pro';
-  const displayName = instructor.profiles?.full_name || 'Instrutor';
-  const photoUrl = instructor.profiles?.avatar_url || '/placeholder.svg';
+  const displayName = instructor.first_name && instructor.last_name
+    ? `${instructor.first_name} ${instructor.last_name}`
+    : 'Instrutor';
+  const photoUrl = instructor.avatar_url || '/placeholder.svg';
 
   // Differentials based on instructor data
   const differentials = [

@@ -131,21 +131,26 @@ const Instrutores = () => {
           {/* Results Grid */}
           {hasResults && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-fr">
-              {instructors.map((instructor) => (
-                <InstructorCard
-                  key={instructor.id}
-                  id={instructor.id}
-                  name={instructor.profiles?.full_name || 'Instrutor'}
-                  photo={instructor.profiles?.avatar_url || '/placeholder.svg'}
-                  rating={instructor.rating || 0}
-                  reviewCount={instructor.review_count || 0}
-                  pricePerHour={instructor.price_per_hour || 0}
-                  specialties={instructor.specialties || []}
-                  location={`${instructor.city || 'Cidade'}${instructor.state ? `, ${instructor.state}` : ''}`}
-                  isVerified={instructor.is_verified || false}
-                  isPro={instructor.plan === 'pro'}
-                />
-              ))}
+              {instructors.map((instructor) => {
+                const displayName = instructor.first_name && instructor.last_name
+                  ? `${instructor.first_name} ${instructor.last_name}`
+                  : 'Instrutor';
+                return (
+                  <InstructorCard
+                    key={instructor.id}
+                    id={instructor.id}
+                    name={displayName}
+                    photo={instructor.avatar_url || '/placeholder.svg'}
+                    rating={instructor.rating || 0}
+                    reviewCount={instructor.review_count || 0}
+                    pricePerHour={instructor.price_per_hour || 0}
+                    specialties={instructor.specialties || []}
+                    location={`${instructor.city || 'Cidade'}${instructor.state ? `, ${instructor.state}` : ''}`}
+                    isVerified={instructor.is_verified || false}
+                    isPro={instructor.plan === 'pro'}
+                  />
+                );
+              })}
             </div>
           )}
 
@@ -168,21 +173,26 @@ const Instrutores = () => {
                   Instrutores em Destaque
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
-                  {featuredInstructors.map((instructor) => (
-                    <InstructorCard
-                      key={instructor.id}
-                      id={instructor.id}
-                      name={instructor.profiles?.full_name || 'Instrutor'}
-                      photo={instructor.profiles?.avatar_url || '/placeholder.svg'}
-                      rating={instructor.rating || 0}
-                      reviewCount={instructor.review_count || 0}
-                      pricePerHour={instructor.price_per_hour || 0}
-                      specialties={instructor.specialties || []}
-                      location={`${instructor.city || 'Cidade'}${instructor.state ? `, ${instructor.state}` : ''}`}
-                      isVerified={instructor.is_verified || false}
-                      isPro={true}
-                    />
-                  ))}
+                  {featuredInstructors.map((instructor) => {
+                    const displayName = instructor.first_name && instructor.last_name
+                      ? `${instructor.first_name} ${instructor.last_name}`
+                      : 'Instrutor';
+                    return (
+                      <InstructorCard
+                        key={instructor.id}
+                        id={instructor.id}
+                        name={displayName}
+                        photo={instructor.avatar_url || '/placeholder.svg'}
+                        rating={instructor.rating || 0}
+                        reviewCount={instructor.review_count || 0}
+                        pricePerHour={instructor.price_per_hour || 0}
+                        specialties={instructor.specialties || []}
+                        location={`${instructor.city || 'Cidade'}${instructor.state ? `, ${instructor.state}` : ''}`}
+                        isVerified={instructor.is_verified || false}
+                        isPro={true}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             </div>
