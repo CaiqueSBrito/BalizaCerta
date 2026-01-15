@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Check, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,13 +118,16 @@ const PricingSection = () => {
 
               <CardFooter>
                 <Button
+                  asChild
                   className={`w-full font-semibold ${
                     plan.popular
                       ? "bg-accent text-accent-foreground hover:bg-accent/90"
                       : "bg-primary text-primary-foreground hover:bg-primary/90"
                   }`}
                 >
-                  {plan.popular ? "Começar Agora" : "Criar Conta Grátis"}
+                  <Link to="/cadastro-instrutor">
+                    {plan.popular ? "Começar Agora" : "Criar Conta Grátis"}
+                  </Link>
                 </Button>
               </CardFooter>
             </Card>

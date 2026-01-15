@@ -9,6 +9,8 @@ import InstructorProfile from "./pages/InstructorProfile";
 import InstructorPlans from "./pages/InstructorPlans";
 import InstructorRegister from "./pages/InstructorRegister";
 import CadastroSucesso from "./pages/CadastroSucesso";
+import Cadastro from "./pages/Cadastro";
+import CadastroAluno from "./pages/CadastroAluno";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
           <Route path="/instrutores" element={<Instrutores />} />
           <Route path="/instrutor/:id" element={<InstructorProfile />} />
           <Route path="/planos-instrutor" element={<InstructorPlans />} />
+          <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/cadastro-aluno" element={<CadastroAluno />} />
           <Route path="/cadastro-instrutor" element={<InstructorRegister />} />
           <Route path="/cadastro-sucesso" element={<CadastroSucesso />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

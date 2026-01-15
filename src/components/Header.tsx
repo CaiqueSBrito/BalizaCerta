@@ -56,11 +56,11 @@ const Header = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" className="font-medium">
-              Entrar
+            <Button variant="ghost" className="font-medium" asChild>
+              <Link to="/login">Entrar</Link>
             </Button>
-            <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold shadow-md">
-              Criar Conta
+            <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold shadow-md" asChild>
+              <Link to="/cadastro">Criar Conta</Link>
             </Button>
           </div>
 
@@ -107,11 +107,11 @@ const Header = () => {
                 Para Instrutores
               </Link>
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                <Button variant="ghost" className="justify-start font-medium">
-                  Entrar
+                <Button variant="ghost" className="justify-start font-medium" asChild>
+                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>Entrar</Link>
                 </Button>
-                <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
-                  Criar Conta
+                <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold" asChild>
+                  <Link to="/cadastro" onClick={() => setIsMenuOpen(false)}>Criar Conta</Link>
                 </Button>
               </div>
             </nav>
