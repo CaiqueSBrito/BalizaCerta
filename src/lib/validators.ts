@@ -96,12 +96,27 @@ export const instructorRegistrationSchema = z.object({
   
   password: z
     .string()
-    .min(8, 'Senha deve ter pelo menos 8 caracteres')
-    .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
-    .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
-    .regex(/[0-9]/, 'Senha deve conter pelo menos um número'),
+    .optional()
+    .refine((val) => {
+      // Senha é opcional se vazia (modo completar cadastro)
+      if (!val || val.length === 0) return true;
+      // Se preenchida, deve ter pelo menos 8 caracteres
+      return val.length >= 8;
+    }, 'Senha deve ter pelo menos 8 caracteres')
+    .refine((val) => {
+      if (!val || val.length === 0) return true;
+      return /[A-Z]/.test(val);
+    }, 'Senha deve conter pelo menos uma letra maiúscula')
+    .refine((val) => {
+      if (!val || val.length === 0) return true;
+      return /[a-z]/.test(val);
+    }, 'Senha deve conter pelo menos uma letra minúscula')
+    .refine((val) => {
+      if (!val || val.length === 0) return true;
+      return /[0-9]/.test(val);
+    }, 'Senha deve conter pelo menos um número'),
   
-  confirmPassword: z.string(),
+  confirmPassword: z.string().optional(),
   
   // Campos opcionais do instrutor
   bio: z
@@ -142,7 +157,11 @@ export const instructorRegistrationSchema = z.object({
   specialties: z
     .array(z.string())
     .optional(),
-}).refine((data) => data.password === data.confirmPassword, {
+}).refine((data) => {
+  // Se senha não foi preenchida, não precisa validar confirmação
+  if (!data.password || data.password.length === 0) return true;
+  return data.password === data.confirmPassword;
+}, {
   message: 'As senhas não coincidem',
   path: ['confirmPassword'],
 });
