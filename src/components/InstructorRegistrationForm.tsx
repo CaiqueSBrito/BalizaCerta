@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -60,6 +60,8 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isCompletingRegistration, setIsCompletingRegistration] = useState(false);
+  const [existingUserId, setExistingUserId] = useState<string | null>(null);
 
   const form = useForm<InstructorRegistrationData>({
     resolver: zodResolver(instructorRegistrationSchema),
@@ -84,10 +86,55 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
     },
   });
 
+  // Verificar se o usuário já está logado e precisa apenas completar o cadastro
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isComplete = urlParams.get('complete') === 'true';
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session && isComplete) {
+        console.log('[InstructorForm] Usuário já logado, modo completar cadastro');
+        setIsCompletingRegistration(true);
+        setExistingUserId(session.user.id);
+        
+        // Preencher dados do formulário com metadados do usuário
+        const metadata = session.user.user_metadata;
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        
+        if (profile || metadata) {
+          form.setValue('firstName', profile?.first_name || metadata?.first_name || '');
+          form.setValue('lastName', profile?.last_name || metadata?.last_name || '');
+          form.setValue('email', session.user.email || '');
+          form.setValue('whatsapp', profile?.whatsapp || metadata?.whatsapp || '');
+          form.setValue('age', profile?.age || metadata?.age || 18);
+        }
+      }
+    };
+    
+    checkExistingSession();
+  }, [form]);
+
   const onSubmit = async (data: InstructorRegistrationData) => {
     setIsLoading(true);
 
     try {
+      // Se NÃO está completando cadastro, senha é obrigatória
+      if (!isCompletingRegistration) {
+        if (!data.password || data.password.length < 8) {
+          toast.error('Senha é obrigatória', {
+            description: 'A senha deve ter pelo menos 8 caracteres.',
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Limpar formatação do CPF e WhatsApp antes de enviar
       const cleanCPF = data.cpf.replace(/[^\d]/g, '');
       const cleanWhatsApp = data.whatsapp.replace(/[^\d]/g, '');
@@ -214,6 +261,29 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
         return insertedInstructor;
       };
 
+      // Se está completando cadastro (usuário já logado via callback de email)
+      if (isCompletingRegistration && existingUserId) {
+        console.log('[InstructorForm] Modo completar cadastro para userId:', existingUserId);
+        
+        const canContinue = await ensureInstructorProfile(existingUserId);
+        if (!canContinue) return;
+
+        await saveInstructorData(existingUserId);
+
+        toast.success('Cadastro completado com sucesso!', {
+          description: 'Seu perfil de instrutor foi salvo. Redirecionando...',
+        });
+
+        form.reset();
+
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          navigate('/dashboard');
+        }
+        return;
+      }
+
       // Se o usuário já está autenticado (ex: voltou do /auth/callback), só completa as tabelas.
       const { data: sessionData } = await supabase.auth.getSession();
       let session = sessionData.session;
@@ -241,7 +311,7 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
             authError.message.includes('already been registered')
           ) {
             toast.error('Este e-mail já está cadastrado', {
-              description: 'Faça login para continuar (ou use “Esqueci minha senha”).',
+              description: 'Faça login para continuar (ou use "Esqueci minha senha").',
             });
             navigate('/login');
             return;
@@ -258,7 +328,7 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
           return;
         }
 
-        // Caso clássico do Supabase: signup “ok” mas usuário já existe/confirmado (não reenvia email)
+        // Caso clássico do Supabase: signup "ok" mas usuário já existe/confirmado (não reenvia email)
         const identities = authData.user?.identities;
         const isRepeatedSignup = Array.isArray(identities) && identities.length === 0;
 
@@ -270,7 +340,7 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
 
           if (signInError || !signInData.session) {
             toast.error('Este e-mail já possui conta', {
-              description: 'A senha informada não confere. Use “Esqueci minha senha” para recuperar o acesso.',
+              description: 'A senha informada não confere. Use "Esqueci minha senha" para recuperar o acesso.',
             });
             navigate('/login');
             return;
@@ -288,6 +358,8 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
               'Se este for seu primeiro cadastro, enviamos um link de confirmação para seu e-mail. Se você já tem conta, faça login para continuar.',
             duration: 10000,
           });
+          // Redireciona para página de sucesso informando para checar o email
+          navigate('/cadastro-sucesso');
           return;
         }
       }
@@ -365,8 +437,18 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
                 <FormItem>
                   <FormLabel>Email *</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="joao@exemplo.com" {...field} />
+                    <Input 
+                      type="email" 
+                      placeholder="joao@exemplo.com" 
+                      disabled={isCompletingRegistration}
+                      {...field} 
+                    />
                   </FormControl>
+                  {isCompletingRegistration && (
+                    <FormDescription className="text-green-600">
+                      ✓ Email já confirmado
+                    </FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -453,75 +535,77 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
           />
         </div>
 
-        {/* Senha */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
-            Segurança
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Senha *</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        type={showPassword ? 'text' : 'password'} 
-                        placeholder="••••••••" 
-                        {...field} 
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormDescription>
-                    Mínimo 8 caracteres, com maiúscula, minúscula e número
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {/* Senha - Ocultar se completando cadastro */}
+        {!isCompletingRegistration && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
+              Segurança
+            </h3>
             
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmar Senha *</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        type={showConfirmPassword ? 'text' : 'password'} 
-                        placeholder="••••••••" 
-                        {...field} 
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Senha *</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input 
+                          type={showPassword ? 'text' : 'password'} 
+                          placeholder="••••••••" 
+                          {...field} 
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      Mínimo 8 caracteres, com maiúscula, minúscula e número
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirmar Senha *</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input 
+                          type={showConfirmPassword ? 'text' : 'password'} 
+                          placeholder="••••••••" 
+                          {...field} 
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Informações Profissionais */}
         <div className="space-y-4">
