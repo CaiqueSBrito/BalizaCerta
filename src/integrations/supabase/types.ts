@@ -176,6 +176,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       instructors_public: {
@@ -199,7 +220,6 @@ export type Database = {
           review_count: number | null
           specialties: string[] | null
           state: string | null
-          whatsapp: string | null
           whatsapp_masked: string | null
         }
         Relationships: [
@@ -214,6 +234,7 @@ export type Database = {
       }
     }
     Functions: {
+      contact_instructor: { Args: { p_instructor_id: string }; Returns: string }
       get_instructor_by_id: {
         Args: { p_instructor_id: string }
         Returns: {
@@ -269,10 +290,19 @@ export type Database = {
           whatsapp_masked: string
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       validate_cpf: { Args: { cpf: string }; Returns: boolean }
       validate_whatsapp: { Args: { phone: string }; Returns: boolean }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       cnh_category: "A" | "B" | "AB" | "C" | "D" | "E"
       instructor_plan: "free" | "pro"
       user_type: "student" | "instructor"
@@ -403,6 +433,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       cnh_category: ["A", "B", "AB", "C", "D", "E"],
       instructor_plan: ["free", "pro"],
       user_type: ["student", "instructor"],

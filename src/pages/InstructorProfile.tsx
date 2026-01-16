@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useInstructor, getInstructorWhatsApp } from '@/hooks/useInstructors';
+import { useInstructor } from '@/hooks/useInstructors';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -59,8 +59,32 @@ const InstructorProfile = () => {
     setIsContactLoading(true);
 
     try {
-      // Get WhatsApp via secure RPC function
-      const whatsapp = await getInstructorWhatsApp(instructor.id);
+      // Check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      let whatsapp: string | null = null;
+      
+      if (user) {
+        // Use secure RPC function that registers connection AND returns WhatsApp
+        const { data, error } = await supabase.rpc('contact_instructor', {
+          p_instructor_id: instructor.id
+        });
+        
+        if (error) {
+          console.error('Error contacting instructor:', error);
+          throw error;
+        }
+        
+        whatsapp = data;
+      } else {
+        // For non-authenticated users, get masked WhatsApp and prompt login
+        toast({
+          title: 'Faça login para contatar',
+          description: 'Para ver o WhatsApp completo do instrutor, faça login ou cadastre-se.',
+          variant: 'destructive',
+        });
+        return;
+      }
       
       if (!whatsapp) {
         toast({
@@ -69,17 +93,6 @@ const InstructorProfile = () => {
           variant: 'destructive',
         });
         return;
-      }
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Register connection in the database
-        await supabase.from('connections').insert({
-          student_id: user.id,
-          instructor_id: instructor.id,
-        });
       }
 
       // Format WhatsApp number
