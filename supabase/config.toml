@@ -2,3 +2,7 @@ project_id = "yqasidudmgpolryxtxse"
 
 [functions.seed-test-instructors]
 verify_jwt = false
+
+# Shared utilities are available in _shared folder
+# - rate-limiter.ts: Prevent brute-force attacks
+# - cors.ts: CORS headers and response utilities
