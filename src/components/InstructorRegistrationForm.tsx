@@ -659,8 +659,8 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
                       key={specialty}
                       className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-colors text-sm ${
                         field.value?.includes(specialty)
-                          ? 'bg-secondary text-secondary-foreground border-secondary'
-                          : 'bg-background border-border hover:border-secondary'
+                          ? 'bg-accent text-accent-foreground border-accent'
+                          : 'bg-background border-border hover:border-accent/50'
                       }`}
                     >
                       <Checkbox
