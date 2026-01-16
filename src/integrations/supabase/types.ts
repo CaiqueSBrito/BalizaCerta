@@ -215,22 +215,13 @@ export type Database = {
           last_name: string | null
           plan: Database["public"]["Enums"]["instructor_plan"] | null
           price_per_hour: number | null
-          profile_id: string | null
           rating: number | null
           review_count: number | null
           specialties: string[] | null
           state: string | null
           whatsapp_masked: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "instructors_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
