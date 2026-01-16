@@ -30,6 +30,12 @@ import {
   formatCPF,
   formatWhatsApp 
 } from '@/lib/validators';
+import { 
+  sanitizeText, 
+  sanitizeName, 
+  sanitizeCity,
+  mapErrorToUserMessage 
+} from '@/lib/sanitize';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -135,10 +141,14 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
         }
       }
 
-      // Limpar formatação do CPF e WhatsApp antes de enviar
-      const cleanCPF = data.cpf.replace(/[^\d]/g, '');
-      const cleanWhatsApp = data.whatsapp.replace(/[^\d]/g, '');
-      const fullName = `${data.firstName.trim()} ${data.lastName.trim()}`.trim() || data.email.trim();
+      // Sanitizar e limpar todos os dados antes de enviar
+      const cleanCPF = data.cpf.replace(/[^\d]/g, '').slice(0, 11);
+      const cleanWhatsApp = data.whatsapp.replace(/[^\d]/g, '').slice(0, 11);
+      const sanitizedFirstName = sanitizeName(data.firstName);
+      const sanitizedLastName = sanitizeName(data.lastName);
+      const sanitizedBio = sanitizeText(data.bio || '').slice(0, 500);
+      const sanitizedCity = sanitizeCity(data.city);
+      const fullName = `${sanitizedFirstName} ${sanitizedLastName}`.trim() || data.email.trim();
 
       const ensureInstructorProfile = async (userId: string) => {
         // Se o usuário já tiver perfil como aluno, não “promover” silenciosamente.
@@ -165,13 +175,13 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
           .upsert(
             {
               id: userId,
-              email: data.email.trim(),
-              full_name: fullName,
-              first_name: data.firstName.trim(),
-              last_name: data.lastName.trim(),
+              email: data.email.trim().toLowerCase().slice(0, 255),
+              full_name: fullName.slice(0, 100),
+              first_name: sanitizedFirstName.slice(0, 50),
+              last_name: sanitizedLastName.slice(0, 50),
               user_type: 'instructor',
               whatsapp: cleanWhatsApp,
-              age: data.age,
+              age: Math.max(18, Math.min(data.age, 100)),
               cpf: cleanCPF,
             },
             { onConflict: 'id' }
@@ -185,17 +195,18 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
       };
 
       const saveInstructorData = async (userId: string) => {
+        // Sanitizar todos os campos de texto livre
         const instructorData = {
           profile_id: userId,
-          bio: data.bio || null,
-          price_per_hour: data.pricePerHour || 0,
+          bio: sanitizedBio || null,
+          price_per_hour: Math.max(0, Math.min(data.pricePerHour || 0, 1000)),
           cnh_category: data.cnhCategory as ("A" | "B" | "AB" | "C" | "D" | "E")[],
-          cnh_years: data.cnhYears,
-          has_vehicle: data.hasVehicle,
-          city: data.city || null,
-          state: data.state ? data.state.toUpperCase() : null,
-          specialties: data.specialties || [],
-          detran_certificate: data.detranCertificate || null,
+          cnh_years: Math.max(0, Math.min(data.cnhYears, 50)),
+          has_vehicle: Boolean(data.hasVehicle),
+          city: sanitizedCity || null,
+          state: data.state ? data.state.toUpperCase().slice(0, 2) : null,
+          specialties: (data.specialties || []).map(s => sanitizeText(s).slice(0, 50)),
+          detran_certificate: sanitizeText(data.detranCertificate || '').slice(0, 50) || null,
           plan: 'free' as const,
           is_active: true,
           is_verified: false,
@@ -383,8 +394,9 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
         navigate('/');
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao cadastrar';
-      toast.error(message);
+      // NUNCA expor mensagens de erro técnicas ao usuário
+      console.error('[InstructorForm] Erro no cadastro:', error);
+      toast.error(mapErrorToUserMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -407,7 +419,12 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
                 <FormItem>
                   <FormLabel>Nome *</FormLabel>
                   <FormControl>
-                    <Input placeholder="João" {...field} />
+                    <Input 
+                      placeholder="João" 
+                      maxLength={50}
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value.slice(0, 50))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -421,7 +438,12 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
                 <FormItem>
                   <FormLabel>Sobrenome *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Silva" {...field} />
+                    <Input 
+                      placeholder="Silva" 
+                      maxLength={50}
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value.slice(0, 50))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -440,8 +462,10 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
                     <Input 
                       type="email" 
                       placeholder="joao@exemplo.com" 
+                      maxLength={255}
                       disabled={isCompletingRegistration}
-                      {...field} 
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value.toLowerCase().slice(0, 255))}
                     />
                   </FormControl>
                   {isCompletingRegistration && (
@@ -524,7 +548,12 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
               <FormItem>
                 <FormLabel>Certificado/Credencial DETRAN *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Número do certificado de instrutor" {...field} />
+                  <Input 
+                    placeholder="Número do certificado de instrutor" 
+                    maxLength={50}
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value.slice(0, 50))}
+                  />
                 </FormControl>
                 <FormDescription>
                   Número da sua credencial de instrutor junto ao DETRAN
@@ -722,7 +751,9 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
                   <Textarea 
                     placeholder="Conte um pouco sobre sua experiência e método de ensino..."
                     className="min-h-[100px]"
+                    maxLength={500}
                     {...field}
+                    onChange={(e) => field.onChange(e.target.value.slice(0, 500))}
                   />
                 </FormControl>
                 <FormDescription>Máximo 500 caracteres</FormDescription>
@@ -782,7 +813,12 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
                 <FormItem>
                   <FormLabel>Cidade *</FormLabel>
                   <FormControl>
-                    <Input placeholder="São Paulo" {...field} />
+                    <Input 
+                      placeholder="São Paulo" 
+                      maxLength={100}
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value.slice(0, 100))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

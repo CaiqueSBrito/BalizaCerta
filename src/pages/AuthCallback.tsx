@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { mapErrorToUserMessage, sanitizeName, sanitizeWhatsApp, sanitizeAge } from '@/lib/sanitize';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -19,15 +20,15 @@ const AuthCallback = () => {
       console.log('[AuthCallback] Hash:', window.location.hash);
       
       try {
-        // Verificar se há um erro na URL
+        // Verificar se há um erro na URL (NÃO expor detalhes técnicos)
         const errorParam = searchParams.get('error');
-        const errorDescription = searchParams.get('error_description');
+        const errorCode = searchParams.get('error_code');
         
-        if (errorParam) {
-          console.error('[AuthCallback] Erro na URL:', errorParam, errorDescription);
-          setError(errorDescription || errorParam);
+        if (errorParam || errorCode) {
+          console.error('[AuthCallback] Erro na URL:', errorParam, errorCode);
+          setError('Erro na confirmação do email');
           toast.error('Erro na confirmação', {
-            description: errorDescription || errorParam,
+            description: 'Não foi possível confirmar seu email. Tente novamente.',
           });
           setTimeout(() => navigate('/login'), 3000);
           return;
@@ -85,21 +86,29 @@ const AuthCallback = () => {
           console.error('[AuthCallback] Erro ao verificar perfil:', profileError);
         }
 
-        // Se não existe perfil, criar um baseado nos metadados
+        // Se não existe perfil, criar um baseado nos metadados (sanitizados)
         if (!profile) {
           console.log('[AuthCallback] Criando perfil para o usuário...');
           const metadata = session.user.user_metadata;
+          
+          // Sanitizar todos os dados de metadados
+          const firstName = sanitizeName(metadata?.first_name || '');
+          const lastName = sanitizeName(metadata?.last_name || '');
+          const fullName = `${firstName} ${lastName}`.trim().slice(0, 100) || session.user.email?.slice(0, 100) || '';
+          const whatsapp = metadata?.whatsapp ? sanitizeWhatsApp(String(metadata.whatsapp)) : null;
+          const age = metadata?.age ? sanitizeAge(metadata.age) : null;
+          
           const { error: insertProfileError } = await supabase
             .from('profiles')
             .insert({
               id: userId,
-              email: session.user.email || '',
-              full_name: `${metadata?.first_name || ''} ${metadata?.last_name || ''}`.trim() || session.user.email || '',
-              first_name: metadata?.first_name || null,
-              last_name: metadata?.last_name || null,
-              user_type: metadata?.user_type || 'student',
-              whatsapp: metadata?.whatsapp || null,
-              age: metadata?.age || null,
+              email: (session.user.email || '').slice(0, 255),
+              full_name: fullName,
+              first_name: firstName || null,
+              last_name: lastName || null,
+              user_type: metadata?.user_type === 'instructor' ? 'instructor' : 'student',
+              whatsapp: whatsapp,
+              age: age,
             });
 
           if (insertProfileError) {
@@ -149,10 +158,10 @@ const AuthCallback = () => {
         
       } catch (err) {
         console.error('[AuthCallback] Erro:', err);
-        const message = err instanceof Error ? err.message : 'Erro desconhecido';
-        setError(message);
+        // NUNCA expor mensagens de erro técnicas
+        setError('Erro ao processar confirmação');
         toast.error('Erro ao processar confirmação', {
-          description: message,
+          description: 'Por favor, tente fazer login novamente.',
         });
         setTimeout(() => navigate('/login'), 3000);
       }
@@ -169,7 +178,7 @@ const AuthCallback = () => {
           <div className="text-center p-8 max-w-md">
             <div className="text-destructive text-6xl mb-4">⚠️</div>
             <h1 className="text-2xl font-bold text-foreground mb-2">Erro na Autenticação</h1>
-            <p className="text-muted-foreground mb-4">{error}</p>
+            <p className="text-muted-foreground mb-4">Não foi possível processar sua solicitação.</p>
             <p className="text-sm text-muted-foreground">Redirecionando para login...</p>
           </div>
         </main>

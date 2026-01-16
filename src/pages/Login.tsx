@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Loader2, Mail, Lock, Car } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { mapErrorToUserMessage, sanitizeEmail } from '@/lib/sanitize';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -50,8 +51,27 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
+    // Validação básica no frontend
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password;
+
+    if (!trimmedEmail || !trimmedPassword) {
       toast.error('Por favor, preencha todos os campos');
+      return;
+    }
+
+    // Validação de formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error('E-mail inválido', {
+        description: 'Por favor, insira um e-mail válido.',
+      });
+      return;
+    }
+
+    // Limitar tamanho do email
+    if (trimmedEmail.length > 255) {
+      toast.error('E-mail muito longo');
       return;
     }
 
@@ -59,24 +79,13 @@ const Login = () => {
 
     try {
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: trimmedEmail,
+        password: trimmedPassword,
       });
 
       if (authError) {
-        if (authError.message.includes('Invalid login credentials')) {
-          toast.error('Credenciais inválidas', {
-            description: 'E-mail ou senha incorretos. Verifique seus dados e tente novamente.',
-          });
-        } else if (authError.message.includes('Email not confirmed')) {
-          toast.error('E-mail não confirmado', {
-            description: 'Por favor, verifique sua caixa de entrada e confirme seu e-mail.',
-          });
-        } else {
-          toast.error('Erro ao fazer login', {
-            description: authError.message,
-          });
-        }
+        // NUNCA expor mensagens de erro técnicas
+        toast.error(mapErrorToUserMessage(authError));
         return;
       }
 
@@ -97,7 +106,8 @@ const Login = () => {
         .maybeSingle();
 
       if (profileFetchError) {
-        toast.error('Erro ao carregar perfil', { description: profileFetchError.message });
+        console.error('[Login] Erro ao carregar perfil:', profileFetchError);
+        toast.error(mapErrorToUserMessage(profileFetchError));
         await supabase.auth.signOut();
         return;
       }
@@ -106,25 +116,26 @@ const Login = () => {
 
       if (!existingProfile) {
         const meta = authData.user.user_metadata ?? {};
-        const firstName = typeof meta.first_name === 'string' ? meta.first_name : '';
-        const lastName = typeof meta.last_name === 'string' ? meta.last_name : '';
-        const fullName = `${firstName} ${lastName}`.trim() || authData.user.email || 'Usuário';
+        const firstName = typeof meta.first_name === 'string' ? meta.first_name.slice(0, 50) : '';
+        const lastName = typeof meta.last_name === 'string' ? meta.last_name.slice(0, 50) : '';
+        const fullName = `${firstName} ${lastName}`.trim().slice(0, 100) || authData.user.email?.slice(0, 100) || 'Usuário';
 
         const metaUserType = meta.user_type === 'instructor' ? 'instructor' : 'student';
 
         const { error: createProfileError } = await supabase.from('profiles').insert({
           id: userId,
-          email: authData.user.email || email,
+          email: (authData.user.email || trimmedEmail).slice(0, 255),
           full_name: fullName,
           first_name: firstName || null,
           last_name: lastName || null,
           user_type: metaUserType,
-          whatsapp: typeof meta.whatsapp === 'string' ? meta.whatsapp : null,
-          age: typeof meta.age === 'number' ? meta.age : null,
+          whatsapp: typeof meta.whatsapp === 'string' ? meta.whatsapp.replace(/[^\d]/g, '').slice(0, 11) : null,
+          age: typeof meta.age === 'number' ? Math.max(18, Math.min(meta.age, 100)) : null,
         });
 
         if (createProfileError) {
-          toast.error('Não foi possível criar seu perfil', { description: createProfileError.message });
+          console.error('[Login] Erro ao criar perfil:', createProfileError);
+          toast.error(mapErrorToUserMessage(createProfileError));
           await supabase.auth.signOut();
           return;
         }
@@ -149,7 +160,8 @@ const Login = () => {
         .maybeSingle();
 
       if (instructorError) {
-        toast.error('Erro ao carregar dados do instrutor', { description: instructorError.message });
+        console.error('[Login] Erro ao carregar instrutor:', instructorError);
+        toast.error(mapErrorToUserMessage(instructorError));
         return;
       }
 
@@ -167,6 +179,7 @@ const Login = () => {
 
       navigate('/dashboard');
     } catch (error) {
+      console.error('[Login] Erro inesperado:', error);
       toast.error('Erro inesperado', {
         description: 'Ocorreu um erro ao processar o login. Tente novamente.',
       });
@@ -176,24 +189,33 @@ const Login = () => {
   };
 
   const handleForgotPassword = async () => {
-    if (!email) {
+    const trimmedEmail = email.trim().toLowerCase();
+    
+    if (!trimmedEmail) {
       toast.error('Informe seu e-mail', {
         description: 'Digite seu e-mail para receber o link de redefinição de senha.',
       });
       return;
     }
 
+    // Validação de formato
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error('E-mail inválido');
+      return;
+    }
+
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
         redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
       });
 
       if (error) {
-        toast.error('Erro ao enviar e-mail', {
-          description: error.message,
-        });
+        console.error('[Login] Erro ao enviar reset:', error);
+        // Mensagem genérica por segurança (não revelar se email existe)
+        toast.success('Se este e-mail estiver cadastrado, você receberá um link de redefinição.');
         return;
       }
 
@@ -202,7 +224,7 @@ const Login = () => {
       });
     } catch (error) {
       console.error('[Login] Erro ao enviar reset:', error);
-      toast.error('Erro inesperado ao enviar e-mail');
+      toast.error('Erro ao enviar e-mail. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -254,10 +276,11 @@ const Login = () => {
                     type="email"
                     placeholder="seu@email.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => setEmail(e.target.value.slice(0, 255))}
                     className="pl-10"
                     disabled={isLoading}
                     autoComplete="email"
+                    maxLength={255}
                   />
                 </div>
               </div>
@@ -273,10 +296,11 @@ const Login = () => {
                     type="password"
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => setPassword(e.target.value.slice(0, 128))}
                     className="pl-10"
                     disabled={isLoading}
                     autoComplete="current-password"
+                    maxLength={128}
                   />
                 </div>
               </div>

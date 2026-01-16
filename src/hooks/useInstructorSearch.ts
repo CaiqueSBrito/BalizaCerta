@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeCity, sanitizeText } from '@/lib/sanitize';
 
 export interface InstructorSearchFilters {
   city?: string;
@@ -49,12 +50,14 @@ export const useInstructorSearch = (filters: InstructorSearchFilters) => {
 
       let filteredData = data as SearchInstructor[];
 
-      // Filter by city (case-insensitive partial match)
+      // Filter by city (case-insensitive partial match) - sanitized
       if (filters.city && filters.city.trim()) {
-        const citySearch = filters.city.trim().toLowerCase();
-        filteredData = filteredData.filter(
-          (instructor) => instructor.city?.toLowerCase().includes(citySearch)
-        );
+        const citySearch = sanitizeCity(filters.city).toLowerCase();
+        if (citySearch) {
+          filteredData = filteredData.filter(
+            (instructor) => instructor.city?.toLowerCase().includes(citySearch)
+          );
+        }
       }
 
       // Filter by CNH category
@@ -73,29 +76,36 @@ export const useInstructorSearch = (filters: InstructorSearchFilters) => {
         );
       }
 
-      // Filter by specialty
+      // Filter by specialty - sanitized
       if (filters.specialty && filters.specialty.trim()) {
+        const sanitizedSpecialty = sanitizeText(filters.specialty).slice(0, 50);
+        if (sanitizedSpecialty) {
+          filteredData = filteredData.filter(
+            (instructor) => instructor.specialties?.includes(sanitizedSpecialty)
+          );
+        }
+      }
+
+      // Filter by price range - ensure numbers are valid
+      const minPrice = Math.max(0, Math.min(filters.minPrice ?? 0, 10000));
+      const maxPrice = Math.max(0, Math.min(filters.maxPrice ?? 10000, 10000));
+      
+      if (minPrice > 0) {
         filteredData = filteredData.filter(
-          (instructor) => instructor.specialties?.includes(filters.specialty!)
+          (instructor) => instructor.price_per_hour >= minPrice
+        );
+      }
+      if (maxPrice > 0 && maxPrice < 10000) {
+        filteredData = filteredData.filter(
+          (instructor) => instructor.price_per_hour <= maxPrice
         );
       }
 
-      // Filter by price range
-      if (filters.minPrice !== undefined && filters.minPrice > 0) {
+      // Filter by minimum rating - ensure valid number
+      const minRating = Math.max(0, Math.min(filters.minRating ?? 0, 5));
+      if (minRating > 0) {
         filteredData = filteredData.filter(
-          (instructor) => instructor.price_per_hour >= filters.minPrice!
-        );
-      }
-      if (filters.maxPrice !== undefined && filters.maxPrice > 0) {
-        filteredData = filteredData.filter(
-          (instructor) => instructor.price_per_hour <= filters.maxPrice!
-        );
-      }
-
-      // Filter by minimum rating
-      if (filters.minRating !== undefined && filters.minRating > 0) {
-        filteredData = filteredData.filter(
-          (instructor) => instructor.rating >= filters.minRating!
+          (instructor) => instructor.rating >= minRating
         );
       }
 

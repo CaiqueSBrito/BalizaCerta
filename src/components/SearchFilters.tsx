@@ -6,6 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { sanitizeCity } from '@/lib/sanitize';
 
 interface SearchFiltersProps {
   city: string;
@@ -58,14 +59,21 @@ const SearchFilters = ({
   return (
     <div className="bg-card rounded-2xl p-4 shadow-lg border border-border">
       <div className="flex flex-col lg:flex-row gap-3">
-        {/* City Input */}
+        {/* City Input - with sanitization */}
         <div className="flex-1 relative">
           <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
           <input
             type="text"
             placeholder="Digite sua cidade..."
             value={city}
-            onChange={(e) => setCity(e.target.value)}
+            onChange={(e) => {
+              // Sanitizar input: apenas letras, espaços, acentos e hífen
+              const sanitized = e.target.value
+                .replace(/[^a-zA-ZÀ-ÿ\s-]/g, '')
+                .slice(0, 100);
+              setCity(sanitized);
+            }}
+            maxLength={100}
             className="w-full h-12 pl-12 pr-4 bg-secondary rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent transition-all"
           />
         </div>
