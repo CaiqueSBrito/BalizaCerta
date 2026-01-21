@@ -122,34 +122,53 @@ const SelecionarPlano = () => {
     checkAccess();
   }, [user, authLoading, navigate]);
 
+  // Stripe Pro price ID
+  const STRIPE_PRO_PRICE_ID = 'price_1Ss8LVHkaUQgqOaK7IA8qPwq';
+
   const handleSelectPlan = async (planType: 'free' | 'pro') => {
     if (!user) return;
 
     setIsUpdating(true);
 
     try {
-      const { error } = await supabase
-        .from('instructors')
-        .update({
-          plan: planType,
-          plan_selected_at: new Date().toISOString(),
-        })
-        .eq('profile_id', user.id);
-
-      if (error) {
-        console.error('[SelecionarPlano] Erro ao atualizar plano:', error);
-        toast.error('Erro ao salvar plano. Tente novamente.');
-        return;
-      }
-
       if (planType === 'free') {
+        // Free plan - update database and redirect
+        const { error } = await supabase
+          .from('instructors')
+          .update({
+            plan: 'free',
+            plan_selected_at: new Date().toISOString(),
+          })
+          .eq('profile_id', user.id);
+
+        if (error) {
+          console.error('[SelecionarPlano] Erro ao atualizar plano:', error);
+          toast.error('Erro ao salvar plano. Tente novamente.');
+          return;
+        }
+
         toast.success('Bem-vindo!', {
           description: 'Você começou com o plano básico. Atualize para o Pro quando quiser!',
         });
         navigate('/dashboard', { replace: true });
       } else {
-        // Pro - mostrar modal de trial
-        setShowProModal(true);
+        // Pro plan - create Stripe checkout session
+        const { data, error } = await supabase.functions.invoke('create-checkout', {
+          body: { priceId: STRIPE_PRO_PRICE_ID },
+        });
+
+        if (error) {
+          console.error('[SelecionarPlano] Erro ao criar checkout:', error);
+          toast.error('Erro ao iniciar pagamento. Tente novamente.');
+          return;
+        }
+
+        if (data?.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = data.url;
+        } else {
+          toast.error('Erro ao gerar link de pagamento.');
+        }
       }
     } catch (error) {
       console.error('[SelecionarPlano] Erro:', error);
@@ -162,7 +181,7 @@ const SelecionarPlano = () => {
   const handleProModalConfirm = () => {
     setShowProModal(false);
     toast.success('Parabéns! 🎉', {
-      description: 'Você agora é um Instrutor Pro com 30 dias grátis!',
+      description: 'Você agora é um Instrutor Pro!',
     });
     navigate('/dashboard', { replace: true });
   };
@@ -353,11 +372,16 @@ const SelecionarPlano = () => {
                   disabled={isUpdating}
                 >
                   {isUpdating ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Redirecionando...
+                    </>
                   ) : (
-                    <Crown className="w-4 h-4 mr-2" />
+                    <>
+                      <Crown className="w-4 h-4 mr-2" />
+                      {PLANS.pro.buttonText}
+                    </>
                   )}
-                  {PLANS.pro.buttonText}
                 </Button>
               </CardContent>
             </Card>
