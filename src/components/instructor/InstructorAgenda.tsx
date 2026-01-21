@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CalendarDays, Clock, User, Plus, X, Loader2 } from 'lucide-react';
+import { CalendarDays, Clock, Plus, X, Loader2, Check, XCircle } from 'lucide-react';
 import { ptBR } from 'date-fns/locale';
 import { format, isSameDay, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +29,7 @@ export function InstructorAgenda() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [instructorId, setInstructorId] = useState<string | null>(null);
+  const [updatingLessonId, setUpdatingLessonId] = useState<string | null>(null);
 
   // Fetch instructor ID based on profile
   useEffect(() => {
@@ -96,7 +97,7 @@ export function InstructorAgenda() {
               student_name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Aluno' : 'Aluno',
               student_avatar: profile?.avatar_url || undefined,
               scheduled_date: parseISO(lesson.scheduled_date),
-              scheduled_time: lesson.scheduled_time.slice(0, 5), // Format HH:MM
+              scheduled_time: lesson.scheduled_time.slice(0, 5),
               duration_minutes: lesson.duration_minutes,
               status: lesson.status as Lesson['status'],
               notes: lesson.notes || undefined,
@@ -116,16 +117,74 @@ export function InstructorAgenda() {
     fetchLessons();
   }, [instructorId]);
 
+  // Handle lesson confirmation
+  const handleConfirmLesson = async (lessonId: string) => {
+    setUpdatingLessonId(lessonId);
+    
+    try {
+      const { error } = await supabase
+        .from('lessons')
+        .update({ status: 'confirmed', updated_at: new Date().toISOString() })
+        .eq('id', lessonId);
+
+      if (error) {
+        console.error('Error confirming lesson:', error);
+        toast.error('Erro ao confirmar aula');
+        return;
+      }
+
+      // Update local state
+      setLessons(prev => 
+        prev.map(lesson => 
+          lesson.id === lessonId ? { ...lesson, status: 'confirmed' as const } : lesson
+        )
+      );
+      
+      toast.success('Aula confirmada com sucesso!');
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast.error('Erro inesperado ao confirmar aula');
+    } finally {
+      setUpdatingLessonId(null);
+    }
+  };
+
+  // Handle lesson decline/cancellation
+  const handleDeclineLesson = async (lessonId: string) => {
+    setUpdatingLessonId(lessonId);
+    
+    try {
+      const { error } = await supabase
+        .from('lessons')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('id', lessonId);
+
+      if (error) {
+        console.error('Error declining lesson:', error);
+        toast.error('Erro ao recusar aula');
+        return;
+      }
+
+      // Remove from local state (since we filter out cancelled)
+      setLessons(prev => prev.filter(lesson => lesson.id !== lessonId));
+      
+      toast.success('Aula recusada');
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast.error('Erro inesperado ao recusar aula');
+    } finally {
+      setUpdatingLessonId(null);
+    }
+  };
+
   // Filter lessons based on selected date
   const filteredLessons = useMemo(() => {
     const now = new Date();
     
     if (selectedDate) {
-      // Filter by selected date
       return lessons.filter((lesson) => isSameDay(lesson.scheduled_date, selectedDate));
     }
     
-    // No date selected: show all upcoming lessons
     return lessons
       .filter((lesson) => lesson.scheduled_date >= now || isSameDay(lesson.scheduled_date, now))
       .sort((a, b) => a.scheduled_date.getTime() - b.scheduled_date.getTime());
@@ -136,12 +195,10 @@ export function InstructorAgenda() {
     return lessons.map((lesson) => lesson.scheduled_date);
   }, [lessons]);
 
-  // Clear date filter
   const handleClearFilter = () => {
     setSelectedDate(undefined);
   };
 
-  // Get section title
   const getSectionTitle = () => {
     if (selectedDate) {
       return `Aulas em ${format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}`;
@@ -149,7 +206,6 @@ export function InstructorAgenda() {
     return 'Próximas Aulas';
   };
 
-  // Get section description
   const getSectionDescription = () => {
     if (selectedDate) {
       return `Aulas agendadas para ${format(selectedDate, 'EEEE', { locale: ptBR })}`;
@@ -259,7 +315,7 @@ export function InstructorAgenda() {
               {filteredLessons.map((lesson) => (
                 <div
                   key={lesson.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors gap-4"
                 >
                   <div className="flex items-center gap-4">
                     <Avatar className="h-12 w-12 border-2 border-primary/20">
@@ -270,7 +326,7 @@ export function InstructorAgenda() {
                     </Avatar>
                     <div>
                       <p className="font-medium">{lesson.student_name}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                         <CalendarDays className="w-4 h-4" />
                         <span>
                           {format(lesson.scheduled_date, "EEE, dd 'de' MMM", { locale: ptBR })}
@@ -283,11 +339,46 @@ export function InstructorAgenda() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
                     {getStatusBadge(lesson.status)}
-                    <Button variant="outline" size="sm">
-                      Iniciar Aula
-                    </Button>
+                    
+                    {lesson.status === 'pending' && (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleDeclineLesson(lesson.id)}
+                          disabled={updatingLessonId === lesson.id}
+                          className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                        >
+                          {updatingLessonId === lesson.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <XCircle className="w-4 h-4" />
+                          )}
+                          <span className="hidden sm:inline">Recusar</span>
+                        </Button>
+                        <Button 
+                          size="sm"
+                          onClick={() => handleConfirmLesson(lesson.id)}
+                          disabled={updatingLessonId === lesson.id}
+                          className="gap-1 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          {updatingLessonId === lesson.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Check className="w-4 h-4" />
+                          )}
+                          <span className="hidden sm:inline">Confirmar</span>
+                        </Button>
+                      </>
+                    )}
+                    
+                    {lesson.status === 'confirmed' && (
+                      <Button variant="outline" size="sm">
+                        Iniciar Aula
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
