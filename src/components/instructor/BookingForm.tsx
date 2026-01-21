@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { CalendarDays, Clock, MessageCircle, Loader2, LogIn } from 'lucide-react';
 import { ptBR } from 'date-fns/locale';
-import { format, isBefore, startOfDay } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -19,11 +20,16 @@ interface BookingFormProps {
   isPro?: boolean;
 }
 
-// Available time slots
-const TIME_SLOTS = [
-  '07:00', '08:00', '09:00', '10:00', '11:00',
-  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
-];
+// Generate all time slots from 00:00 to 23:00
+const generateTimeSlots = () => {
+  const slots: string[] = [];
+  for (let hour = 0; hour < 24; hour++) {
+    slots.push(`${hour.toString().padStart(2, '0')}:00`);
+  }
+  return slots;
+};
+
+const ALL_TIME_SLOTS = generateTimeSlots();
 
 export function BookingForm({ 
   instructorId, 
@@ -217,34 +223,45 @@ export function BookingForm({
           />
         </div>
 
-        {/* Time Slots */}
+        {/* Time Slots with Scroll */}
         {selectedDate && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Clock className="w-4 h-4 text-primary" />
-              <span>
-                Horários para {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-              </span>
+              <span>Selecione o horário desejado:</span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {TIME_SLOTS.map((time) => (
-                <Button
-                  key={time}
-                  variant={selectedTime === time ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedTime(time)}
-                  className={`${
-                    selectedTime === time 
-                      ? isPro 
-                        ? 'bg-accent text-accent-foreground' 
-                        : 'bg-primary text-primary-foreground'
-                      : ''
-                  }`}
-                >
-                  {time}
-                </Button>
-              ))}
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Horários para {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+            </p>
+            
+            {/* Scrollable Time Slots Container */}
+            <ScrollArea className="h-[220px] w-full rounded-lg border bg-muted/20 p-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pr-3">
+                {ALL_TIME_SLOTS.map((time) => {
+                  const isSelected = selectedTime === time;
+                  return (
+                    <button
+                      key={time}
+                      type="button"
+                      onClick={() => setSelectedTime(time)}
+                      className={`
+                        px-3 py-2.5 rounded-lg text-sm font-medium
+                        transition-all duration-200 ease-in-out
+                        touch-manipulation select-none
+                        ${isSelected 
+                          ? isPro
+                            ? 'bg-accent text-accent-foreground shadow-md scale-105'
+                            : 'bg-primary text-primary-foreground shadow-md scale-105'
+                          : 'bg-card hover:bg-muted border border-border hover:border-primary/50'
+                        }
+                      `}
+                    >
+                      {time}
+                    </button>
+                  );
+                })}
+              </div>
+            </ScrollArea>
           </div>
         )}
 
