@@ -115,9 +115,11 @@ const AlunoDashboard = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      <div className="flex-1 pt-16 md:pt-20">
+      {/* Main content area - starts after header */}
+      <main className="flex-1 pt-16 md:pt-20">
         <SidebarProvider>
-          <div className="min-h-[calc(100vh-4rem)] md:min-h-[calc(100vh-5rem)] flex w-full">
+          <div className="flex w-full min-h-[calc(100vh-4rem-200px)] md:min-h-[calc(100vh-5rem-200px)]">
+            {/* Sidebar - relative positioning within flex container */}
             <StudentSidebar 
               activeModule={activeModule} 
               onModuleChange={setActiveModule}
@@ -126,23 +128,24 @@ const AlunoDashboard = () => {
               onSignOut={handleSignOut}
             />
             
-            <main className="flex-1 flex flex-col">
-              {/* Dashboard Header */}
-              <div className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center px-4 md:px-6 sticky top-16 md:top-20 z-10">
+            {/* Content area */}
+            <div className="flex-1 flex flex-col min-w-0">
+              {/* Dashboard sub-header */}
+              <div className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center px-4 md:px-6 shrink-0">
                 <SidebarTrigger className="mr-4" />
                 <div className="text-sm text-muted-foreground">
                   Olá, <span className="font-medium text-foreground">{studentData?.first_name || 'Aluno'}</span>!
                 </div>
               </div>
 
-              {/* Content */}
+              {/* Scrollable content */}
               <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
                 {renderModule()}
               </div>
-            </main>
+            </div>
           </div>
         </SidebarProvider>
-      </div>
+      </main>
 
       <Footer />
     </div>

@@ -39,20 +39,24 @@ export function StudentSidebar({
   onSignOut 
 }: StudentSidebarProps) {
   return (
-    <Sidebar className="border-r">
-      <SidebarHeader className="p-4 border-b">
+    <Sidebar 
+      className="border-r shrink-0" 
+      collapsible="icon"
+    >
+      <SidebarHeader className="p-4 border-b shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10">
             <GraduationCap className="w-6 h-6 text-primary" />
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="font-semibold text-sm">Painel do Aluno</span>
             <span className="text-xs text-muted-foreground">BalizaCerta</span>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      {/* Scrollable content area */}
+      <SidebarContent className="overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -62,14 +66,15 @@ export function StudentSidebar({
                   <SidebarMenuButton
                     onClick={() => onModuleChange(item.id)}
                     isActive={activeModule === item.id}
+                    tooltip={item.title}
                     className={`transition-colors ${
                       activeModule === item.id 
                         ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
                         : 'hover:bg-muted'
                     }`}
                   >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.title}</span>
+                    <item.icon className="w-4 h-4 shrink-0" />
+                    <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -78,15 +83,15 @@ export function StudentSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t">
-        <div className="flex items-center gap-3 mb-3">
-          <Avatar className="h-10 w-10 border-2 border-primary/20">
+      <SidebarFooter className="p-4 border-t shrink-0">
+        <div className="flex items-center gap-3 mb-3 group-data-[collapsible=icon]:justify-center">
+          <Avatar className="h-10 w-10 border-2 border-primary/20 shrink-0">
             <AvatarImage src={avatarUrl || undefined} alt={studentName} />
             <AvatarFallback className="bg-primary/10 text-primary font-medium">
               {studentName.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col overflow-hidden">
+          <div className="flex flex-col overflow-hidden group-data-[collapsible=icon]:hidden">
             <span className="font-medium text-sm truncate">{studentName}</span>
             <span className="text-xs text-muted-foreground">Aluno</span>
           </div>
@@ -94,11 +99,11 @@ export function StudentSidebar({
         <Button 
           variant="outline" 
           size="sm" 
-          className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+          className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
           onClick={onSignOut}
         >
-          <LogOut className="w-4 h-4" />
-          Sair
+          <LogOut className="w-4 h-4 shrink-0" />
+          <span className="group-data-[collapsible=icon]:hidden">Sair</span>
         </Button>
       </SidebarFooter>
     </Sidebar>
