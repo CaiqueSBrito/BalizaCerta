@@ -15,6 +15,7 @@ import CadastroAluno from "./pages/CadastroAluno";
 import AuthCallback from "./pages/AuthCallback";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import AlunoDashboard from "./pages/AlunoDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -45,6 +46,10 @@ const App = () => (
                   <Dashboard />
                 </ProtectedRoute>
               } 
+            />
+            <Route 
+              path="/aluno-dashboard" 
+              element={<AlunoDashboard />} 
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
