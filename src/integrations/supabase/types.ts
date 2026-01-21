@@ -77,6 +77,10 @@ export type Database = {
           review_count: number | null
           specialties: string[] | null
           state: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_end_date: string | null
+          subscription_status: string | null
           updated_at: string
         }
         Insert: {
@@ -98,6 +102,10 @@ export type Database = {
           review_count?: number | null
           specialties?: string[] | null
           state?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_end_date?: string | null
+          subscription_status?: string | null
           updated_at?: string
         }
         Update: {
@@ -119,6 +127,10 @@ export type Database = {
           review_count?: number | null
           specialties?: string[] | null
           state?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_end_date?: string | null
+          subscription_status?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -323,6 +335,10 @@ export type Database = {
     }
     Functions: {
       contact_instructor: { Args: { p_instructor_id: string }; Returns: string }
+      downgrade_instructor_to_free: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       get_connected_student_info: {
         Args: { p_student_id: string }
         Returns: {
@@ -393,6 +409,15 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      upgrade_instructor_to_pro: {
+        Args: {
+          p_stripe_customer_id: string
+          p_stripe_subscription_id: string
+          p_subscription_end_date: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       validate_cpf: { Args: { cpf: string }; Returns: boolean }
       validate_whatsapp: { Args: { phone: string }; Returns: boolean }
     }
