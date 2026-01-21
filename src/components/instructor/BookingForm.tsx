@@ -143,8 +143,19 @@ export function BookingForm({
   // If user is not logged in, show login prompt
   if (!user) {
     return (
-      <Card className={`border ${isPro ? 'border-accent/30' : 'border-border'}`}>
-        <CardHeader className="text-center">
+      <Card className={`border ${isPro ? 'border-accent/30 shadow-lg shadow-accent/10' : 'border-border'}`}>
+        {/* Price Header */}
+        <div className={`p-4 border-b ${isPro ? 'bg-accent/5' : 'bg-secondary/30'} rounded-t-lg`}>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Valor da aula</p>
+            <p className="text-3xl font-bold text-foreground">
+              R$ {pricePerHour}
+              <span className="text-base font-normal text-muted-foreground">/hora</span>
+            </p>
+          </div>
+        </div>
+        
+        <CardHeader className="text-center pt-6">
           <CalendarDays className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
           <CardTitle>Agende sua aula</CardTitle>
           <CardDescription>
@@ -154,8 +165,11 @@ export function BookingForm({
         <CardContent className="space-y-4">
           <Button 
             onClick={() => navigate('/login')} 
-            className="w-full gap-2"
-            variant={isPro ? 'default' : 'default'}
+            className={`w-full h-12 gap-2 ${
+              isPro 
+                ? 'bg-accent text-accent-foreground hover:bg-accent/90' 
+                : ''
+            }`}
           >
             <LogIn className="w-4 h-4" />
             Fazer Login para Agendar
@@ -169,14 +183,25 @@ export function BookingForm({
   }
 
   return (
-    <Card className={`border ${isPro ? 'border-accent/30' : 'border-border'}`}>
+    <Card className={`border ${isPro ? 'border-accent/30 shadow-lg shadow-accent/10' : 'border-border'}`}>
+      {/* Price Header */}
+      <div className={`p-4 border-b ${isPro ? 'bg-accent/5' : 'bg-secondary/30'} rounded-t-lg`}>
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">Valor da aula</p>
+          <p className="text-3xl font-bold text-foreground">
+            R$ {pricePerHour}
+            <span className="text-base font-normal text-muted-foreground">/hora</span>
+          </p>
+        </div>
+      </div>
+
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarDays className="w-5 h-5 text-primary" />
           Agende sua Aula
         </CardTitle>
         <CardDescription>
-          Selecione uma data e horário disponível
+          📅 Selecione uma data para combinar o horário via WhatsApp
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

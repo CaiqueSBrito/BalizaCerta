@@ -1,10 +1,8 @@
-import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Star, 
   BadgeCheck, 
   Crown, 
-  MessageCircle, 
   MapPin, 
   Car, 
   Calendar, 
@@ -19,8 +17,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useInstructor } from '@/hooks/useInstructors';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 import { BookingForm } from '@/components/instructor/BookingForm';
 
 // Mock reviews - in production these would come from a reviews table
@@ -52,72 +48,6 @@ const InstructorProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: instructor, isLoading, error } = useInstructor(id || '');
-  const [isContactLoading, setIsContactLoading] = useState(false);
-
-  const handleWhatsAppContact = async () => {
-    if (!instructor) return;
-
-    setIsContactLoading(true);
-
-    try {
-      // Check if user is authenticated
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      let whatsapp: string | null = null;
-      
-      if (user) {
-        // Use secure RPC function that registers connection AND returns WhatsApp
-        const { data, error } = await supabase.rpc('contact_instructor', {
-          p_instructor_id: instructor.id
-        });
-        
-        if (error) {
-          console.error('Error contacting instructor:', error);
-          throw error;
-        }
-        
-        whatsapp = data;
-      } else {
-        // For non-authenticated users, get masked WhatsApp and prompt login
-        toast({
-          title: 'Faça login para contatar',
-          description: 'Para ver o WhatsApp completo do instrutor, faça login ou cadastre-se.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      if (!whatsapp) {
-        toast({
-          title: 'WhatsApp não disponível',
-          description: 'Este instrutor ainda não cadastrou seu WhatsApp.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Format WhatsApp number
-      const phone = whatsapp.replace(/\D/g, '');
-      const fullPhone = phone.startsWith('55') ? phone : `55${phone}`;
-      
-      // Create message
-      const message = encodeURIComponent(
-        `Olá! Encontrei seu perfil no BalizaCerta e gostaria de saber mais sobre suas aulas de direção.`
-      );
-      
-      // Open WhatsApp
-      window.open(`https://wa.me/${fullPhone}?text=${message}`, '_blank');
-    } catch (err) {
-      console.error('Error registering connection:', err);
-      toast({
-        title: 'Erro',
-        description: 'Ocorreu um erro. Por favor, tente novamente.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsContactLoading(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -345,76 +275,8 @@ const InstructorProfile = () => {
               </div>
             </div>
 
-            {/* Sidebar */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Pricing Card */}
-              <div className={`bg-card rounded-2xl p-6 border ${
-                isPro 
-                  ? 'border-accent shadow-lg shadow-accent/10' 
-                  : 'border-border'
-              }`}>
-                {/* Price */}
-                <div className="text-center mb-6 pb-6 border-b border-border">
-                  <p className="text-muted-foreground mb-1">Valor da aula</p>
-                  <p className="text-4xl font-bold text-foreground">
-                    R$ {instructor.price_per_hour || 0}
-                    <span className="text-lg font-normal text-muted-foreground">/hora</span>
-                  </p>
-                </div>
-
-                {/* Quick Info */}
-                <div className="space-y-4 mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-secondary rounded-lg">
-                      <Calendar size={18} className="text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tempo de CNH</p>
-                      <p className="font-semibold text-foreground">{instructor.cnh_years || 0} anos</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-secondary rounded-lg">
-                      <Clock size={18} className="text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Aulas ministradas</p>
-                      <p className="font-semibold text-foreground">{(instructor.review_count || 0) * 5}+ aulas</p>
-                    </div>
-                  </div>
-                  {instructor.has_vehicle && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-secondary rounded-lg">
-                        <Car size={18} className="text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Veículo</p>
-                        <p className="font-semibold text-foreground">Carro próprio</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Quick Contact Button */}
-                <Button 
-                  onClick={handleWhatsAppContact}
-                  disabled={isContactLoading}
-                  variant="outline"
-                  className="w-full h-12 gap-2"
-                >
-                  <MessageCircle size={18} />
-                  {isContactLoading ? 'Abrindo...' : 'Contato rápido via WhatsApp'}
-                </Button>
-
-                {/* Trust indicators */}
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-xs text-center text-muted-foreground">
-                    🔒 Contato seguro • Resposta em até 24h
-                  </p>
-                </div>
-              </div>
-
-              {/* Booking Form - New Component */}
+            {/* Sidebar - Booking Form Only */}
+            <div className="lg:col-span-1">
               <div className="sticky top-28">
                 <BookingForm
                   instructorId={instructor.id}
