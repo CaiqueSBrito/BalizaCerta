@@ -8,6 +8,8 @@ import { StudentAgenda } from '@/components/student/StudentAgenda';
 import { StudentInstructor } from '@/components/student/StudentInstructor';
 import { StudentProgress } from '@/components/student/StudentProgress';
 import { StudentSettings } from '@/components/student/StudentSettings';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -76,11 +78,15 @@ const AlunoDashboard = () => {
 
   if (authLoading || isCheckingAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground">Carregando seu painel...</p>
-        </div>
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center pt-16 md:pt-20">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+            <p className="text-muted-foreground">Carregando seu painel...</p>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
@@ -106,42 +112,40 @@ const AlunoDashboard = () => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <StudentSidebar 
-          activeModule={activeModule} 
-          onModuleChange={setActiveModule}
-          studentName={studentData?.first_name || 'Aluno'}
-          avatarUrl={studentData?.avatar_url}
-          onSignOut={handleSignOut}
-        />
-        
-        <main className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center px-4 md:px-6 sticky top-0 z-10">
-            <SidebarTrigger className="mr-4" />
-            <div className="flex items-center gap-2">
-              <img 
-                src="/favicon.png" 
-                alt="BalizaCerta" 
-                className="h-8 w-8"
-              />
-              <span className="font-bold text-lg text-primary hidden sm:inline">
-                BalizaCerta
-              </span>
-            </div>
-            <div className="ml-auto text-sm text-muted-foreground">
-              Olá, <span className="font-medium text-foreground">{studentData?.first_name || 'Aluno'}</span>!
-            </div>
-          </header>
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
+      
+      <div className="flex-1 pt-16 md:pt-20">
+        <SidebarProvider>
+          <div className="min-h-[calc(100vh-4rem)] md:min-h-[calc(100vh-5rem)] flex w-full">
+            <StudentSidebar 
+              activeModule={activeModule} 
+              onModuleChange={setActiveModule}
+              studentName={studentData?.first_name || 'Aluno'}
+              avatarUrl={studentData?.avatar_url}
+              onSignOut={handleSignOut}
+            />
+            
+            <main className="flex-1 flex flex-col">
+              {/* Dashboard Header */}
+              <div className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center px-4 md:px-6 sticky top-16 md:top-20 z-10">
+                <SidebarTrigger className="mr-4" />
+                <div className="text-sm text-muted-foreground">
+                  Olá, <span className="font-medium text-foreground">{studentData?.first_name || 'Aluno'}</span>!
+                </div>
+              </div>
 
-          {/* Content */}
-          <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
-            {renderModule()}
+              {/* Content */}
+              <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
+                {renderModule()}
+              </div>
+            </main>
           </div>
-        </main>
+        </SidebarProvider>
       </div>
-    </SidebarProvider>
+
+      <Footer />
+    </div>
   );
 };
 
