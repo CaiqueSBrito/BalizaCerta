@@ -22,6 +22,7 @@ import { studentRegistrationSchema, formatWhatsApp, type StudentRegistrationData
 import { sanitizeName, sanitizeEmail, sanitizeWhatsApp, sanitizeText, mapErrorToUserMessage } from '@/lib/sanitize';
 import { supabase } from '@/integrations/supabase/client';
 import { upsertStudentRecord } from '@/lib/student-record';
+ import { upsertProfileRecord } from '@/lib/profile-record';
 
 const StudentRegistrationForm = () => {
   const navigate = useNavigate();
@@ -138,8 +139,28 @@ const StudentRegistrationForm = () => {
       // If we have a session (email confirmation disabled), insert student data immediately
       if (authData.session) {
         console.log('[StudentRegistration] Session available, inserting student data');
+
+        // 1) Upsert profile first (garante que profiles existe e está consistente)
+        const fullName = `${sanitizedFirstName} ${sanitizedLastName}`.trim().slice(0, 100);
+        const { error: profileUpsertError } = await upsertProfileRecord({
+          userId: authData.user.id,
+          email: sanitizedEmail,
+          fullName: fullName || sanitizedEmail,
+          firstName: sanitizedFirstName || null,
+          lastName: sanitizedLastName || null,
+          whatsapp: sanitizedWhatsApp,
+          userType: 'student',
+          hasVehicle: data.hasVehicle || false,
+          difficulties: sanitizedDifficulties,
+        });
+
+        if (profileUpsertError) {
+          console.error('[StudentRegistration] ERRO PROFILE:', profileUpsertError);
+          toast.error('Erro ao salvar seu perfil. Tente novamente.');
+          return;
+        }
         
-        // Insert/update students table
+        // 2) Insert/update students table
         const { error: studentError } = await upsertStudentRecord({
           userId: authData.user.id,
           whatsapp: sanitizedWhatsApp,
@@ -148,26 +169,11 @@ const StudentRegistrationForm = () => {
         });
 
         if (studentError) {
-          console.error('[StudentRegistration] Student insert error:', studentError);
-          // Show specific RLS error
-          if (studentError.message?.includes('row-level security')) {
-            toast.error('Erro de permissão ao salvar dados. Entre em contato com o suporte.');
-          }
+          console.error('ERRO STUDENTS:', studentError);
+          toast.error('Erro ao salvar detalhes do aluno');
+          return;
         } else {
           console.log('[StudentRegistration] Student data inserted successfully');
-        }
-
-        // Also update the profile with additional data for consistency
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            has_vehicle: data.hasVehicle || false,
-            difficulties: sanitizedDifficulties,
-          })
-          .eq('id', authData.user.id);
-
-        if (profileError) {
-          console.error('[StudentRegistration] Profile update error:', profileError);
         }
 
         setIsSuccess(true);

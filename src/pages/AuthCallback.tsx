@@ -186,18 +186,14 @@ const AuthCallback = () => {
           });
 
           if (studentUpsertError) {
-            console.error('[AuthCallback] Erro ao inserir/atualizar students:', studentUpsertError);
-            toast.error('Não foi possível salvar seus dados de aluno', {
-              description: 'Tente fazer login novamente. Se o erro persistir, fale com o suporte.',
-            });
+            console.error('ERRO STUDENTS:', studentUpsertError);
+            toast.error('Erro ao salvar detalhes do aluno');
             setTimeout(() => navigate('/login'), 2500);
             return;
           }
         } catch (studentErr) {
-          console.error('[AuthCallback] Erro ao finalizar cadastro do aluno:', studentErr);
-          toast.error('Não foi possível finalizar seu cadastro', {
-            description: 'Por favor, faça login novamente.',
-          });
+          console.error('ERRO STUDENTS:', studentErr);
+          toast.error('Erro ao salvar detalhes do aluno');
           setTimeout(() => navigate('/login'), 2500);
           return;
         }
