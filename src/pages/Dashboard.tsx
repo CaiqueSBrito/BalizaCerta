@@ -1,20 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  User, 
-  Calendar, 
-  MessageSquare, 
-  Star, 
-  TrendingUp,
-  Settings,
-  Loader2
-} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { InstructorSidebar } from '@/components/instructor/InstructorSidebar';
+import { InstructorAgenda } from '@/components/instructor/InstructorAgenda';
+
+type ActiveModule = 'agenda' | 'alunos' | 'evolucao' | 'configuracoes';
 
 interface InstructorProfile {
   first_name: string | null;
@@ -26,15 +22,16 @@ interface InstructorData {
   rating: number | null;
   review_count: number | null;
   is_verified: boolean | null;
-  plan: string;
+  plan: 'free' | 'pro';
 }
 
 const Dashboard = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<InstructorProfile | null>(null);
   const [instructorData, setInstructorData] = useState<InstructorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeModule, setActiveModule] = useState<ActiveModule>('agenda');
 
   useEffect(() => {
     const loadData = async () => {
@@ -73,7 +70,7 @@ const Dashboard = () => {
         if (instructorError) {
           console.error('[Dashboard] Erro ao buscar dados de instrutor:', instructorError);
         } else {
-          setInstructorData(instructorInfo);
+          setInstructorData(instructorInfo as InstructorData);
         }
       } catch (error) {
         console.error('[Dashboard] Erro inesperado:', error);
@@ -87,9 +84,49 @@ const Dashboard = () => {
     }
   }, [user, authLoading, navigate]);
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/');
+      toast.success('Logout realizado com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao fazer logout');
+    }
+  };
+
+  const renderModule = () => {
+    switch (activeModule) {
+      case 'agenda':
+        return <InstructorAgenda />;
+      case 'alunos':
+        return (
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold mb-2">Meus Alunos</h2>
+            <p className="text-muted-foreground">Em breve: lista de alunos conectados.</p>
+          </div>
+        );
+      case 'evolucao':
+        return (
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold mb-2">Evolução Fácil</h2>
+            <p className="text-muted-foreground">Em breve: checklist de progresso pedagógico.</p>
+          </div>
+        );
+      case 'configuracoes':
+        return (
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold mb-2">Configurações</h2>
+            <p className="text-muted-foreground">Em breve: configurações do perfil e conta.</p>
+          </div>
+        );
+      default:
+        return <InstructorAgenda />;
+    }
+  };
+
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="flex flex-col min-h-screen">
         <Header />
         <main className="flex-1 flex items-center justify-center pt-16 md:pt-20">
           <div className="text-center space-y-4">
@@ -108,137 +145,46 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex flex-col min-h-screen bg-background">
+      {/* Header - Fixed at top */}
       <Header />
       
-      {/* Main Content */}
-      <main className="flex-1 pt-20 md:pt-24 pb-8">
-        <div className="container mx-auto px-4">
-          {/* Welcome Section */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground">
-              Bem-vindo de volta, {profile?.first_name || 'Instrutor'}!
-            </h2>
-            <p className="text-muted-foreground mt-1">
-              Gerencie suas aulas, perfil e acompanhe suas estatísticas.
-            </p>
+      {/* Main Body - Flex container that grows to fill space between header and footer */}
+      <main className="flex-1 flex overflow-hidden pt-16 md:pt-20">
+        <SidebarProvider>
+          {/* Sidebar - Height constrained to parent, no fixed/absolute */}
+          <InstructorSidebar 
+            activeModule={activeModule} 
+            onModuleChange={setActiveModule}
+            instructorName={profile?.first_name || 'Instrutor'}
+            avatarUrl={profile?.avatar_url || null}
+            plan={instructorData?.plan || 'free'}
+            isVerified={instructorData?.is_verified || false}
+            onSignOut={handleSignOut}
+          />
+          
+          {/* Content area - Takes remaining width, has own scroll */}
+          <div className="flex-1 flex flex-col min-w-0 h-full">
+            {/* Dashboard sub-header */}
+            <div className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center px-4 md:px-6 shrink-0">
+              <SidebarTrigger className="mr-4" />
+              <div className="text-sm text-muted-foreground">
+                Olá, <span className="font-medium text-foreground">{profile?.first_name || 'Instrutor'}</span>!
+              </div>
+            </div>
+
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+              {renderModule()}
+            </div>
           </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Avaliação
-                </CardTitle>
-                <Star className="w-4 h-4 text-yellow-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {instructorData?.rating?.toFixed(1) || '0.0'}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {instructorData?.review_count || 0} avaliações
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Status
-                </CardTitle>
-                <User className="w-4 h-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {instructorData?.is_verified ? 'Verificado' : 'Pendente'}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Plano {instructorData?.plan === 'pro' ? 'Pro' : 'Gratuito'}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Mensagens
-                </CardTitle>
-                <MessageSquare className="w-4 h-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">0</div>
-                <p className="text-xs text-muted-foreground">
-                  Contatos recentes
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Aulas
-                </CardTitle>
-                <Calendar className="w-4 h-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">0</div>
-                <p className="text-xs text-muted-foreground">
-                  Esta semana
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <User className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Meu Perfil</CardTitle>
-                    <CardDescription>Edite suas informações</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Upgrade para Pro</CardTitle>
-                    <CardDescription>Destaque seu perfil</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Settings className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Configurações</CardTitle>
-                    <CardDescription>Gerencie sua conta</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          </div>
-        </div>
+        </SidebarProvider>
       </main>
 
-      <Footer />
+      {/* Footer - Always at bottom, z-index higher than sidebar */}
+      <div className="relative z-50">
+        <Footer />
+      </div>
     </div>
   );
 };
