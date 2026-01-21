@@ -89,8 +89,24 @@ const StudentRegistrationForm = () => {
         return;
       }
 
-      // If we have a session (email confirmation disabled), update profile with additional data
+      // If we have a session (email confirmation disabled), insert student data
       if (authData.session) {
+        // Insert into students table
+        const { error: studentError } = await supabase
+          .from('students')
+          .insert({
+            id: authData.user.id,
+            whatsapp: sanitizedWhatsApp,
+            tem_veiculo: data.hasVehicle || false,
+            dificuldades: sanitizedDifficulties,
+          });
+
+        if (studentError) {
+          console.error('[StudentRegistration] Student insert error:', studentError);
+          // Don't fail the entire registration, the data can be added later
+        }
+
+        // Also update the profile with additional data for consistency
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
@@ -101,7 +117,6 @@ const StudentRegistrationForm = () => {
 
         if (profileError) {
           console.error('[StudentRegistration] Profile update error:', profileError);
-          // Don't fail the entire registration, just log the error
         }
 
         setIsSuccess(true);
