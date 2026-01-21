@@ -78,7 +78,7 @@ const AlunoDashboard = () => {
 
   if (authLoading || isCheckingAccess) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="flex flex-col min-h-screen">
         <Header />
         <main className="flex-1 flex items-center justify-center pt-16 md:pt-20">
           <div className="text-center space-y-4">
@@ -112,42 +112,44 @@ const AlunoDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex flex-col min-h-screen bg-background">
+      {/* Header - Fixed at top */}
       <Header />
       
-      {/* Main content area - starts after header */}
-      <main className="flex-1 pt-16 md:pt-20">
+      {/* Main Body - Flex container that grows to fill space between header and footer */}
+      <main className="flex-1 flex overflow-hidden pt-16 md:pt-20">
         <SidebarProvider>
-          <div className="flex w-full min-h-[calc(100vh-4rem-200px)] md:min-h-[calc(100vh-5rem-200px)]">
-            {/* Sidebar - relative positioning within flex container */}
-            <StudentSidebar 
-              activeModule={activeModule} 
-              onModuleChange={setActiveModule}
-              studentName={studentData?.first_name || 'Aluno'}
-              avatarUrl={studentData?.avatar_url}
-              onSignOut={handleSignOut}
-            />
-            
-            {/* Content area */}
-            <div className="flex-1 flex flex-col min-w-0">
-              {/* Dashboard sub-header */}
-              <div className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center px-4 md:px-6 shrink-0">
-                <SidebarTrigger className="mr-4" />
-                <div className="text-sm text-muted-foreground">
-                  Olá, <span className="font-medium text-foreground">{studentData?.first_name || 'Aluno'}</span>!
-                </div>
+          {/* Sidebar - Height constrained to parent, no fixed/absolute */}
+          <StudentSidebar 
+            activeModule={activeModule} 
+            onModuleChange={setActiveModule}
+            studentName={studentData?.first_name || 'Aluno'}
+            avatarUrl={studentData?.avatar_url}
+            onSignOut={handleSignOut}
+          />
+          
+          {/* Content area - Takes remaining width, has own scroll */}
+          <div className="flex-1 flex flex-col min-w-0 h-full">
+            {/* Dashboard sub-header */}
+            <div className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center px-4 md:px-6 shrink-0">
+              <SidebarTrigger className="mr-4" />
+              <div className="text-sm text-muted-foreground">
+                Olá, <span className="font-medium text-foreground">{studentData?.first_name || 'Aluno'}</span>!
               </div>
+            </div>
 
-              {/* Scrollable content */}
-              <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
-                {renderModule()}
-              </div>
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+              {renderModule()}
             </div>
           </div>
         </SidebarProvider>
       </main>
 
-      <Footer />
+      {/* Footer - Always at bottom, z-index higher than sidebar */}
+      <div className="relative z-50">
+        <Footer />
+      </div>
     </div>
   );
 };
