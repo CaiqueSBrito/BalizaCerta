@@ -40,12 +40,12 @@ export function StudentSidebar({
 }: StudentSidebarProps) {
   return (
     <Sidebar 
-      className="border-r shrink-0" 
       collapsible="icon"
+      className="border-r h-full shrink-0 flex flex-col"
     >
       <SidebarHeader className="p-4 border-b shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
+          <div className="p-2 rounded-lg bg-primary/10 shrink-0">
             <GraduationCap className="w-6 h-6 text-primary" />
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
@@ -55,8 +55,8 @@ export function StudentSidebar({
         </div>
       </SidebarHeader>
 
-      {/* Scrollable content area */}
-      <SidebarContent className="overflow-y-auto">
+      {/* Scrollable menu content */}
+      <SidebarContent className="flex-1 overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -83,7 +83,7 @@ export function StudentSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t shrink-0">
+      <SidebarFooter className="p-4 border-t shrink-0 mt-auto">
         <div className="flex items-center gap-3 mb-3 group-data-[collapsible=icon]:justify-center">
           <Avatar className="h-10 w-10 border-2 border-primary/20 shrink-0">
             <AvatarImage src={avatarUrl || undefined} alt={studentName} />
