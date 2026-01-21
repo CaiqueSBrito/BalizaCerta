@@ -301,11 +301,14 @@ const InstructorRegistrationForm = ({ onSuccess }: InstructorRegistrationFormPro
 
       // Caso não esteja logado, tentar cadastro
       if (!session) {
+        // Use production URL for email redirect to avoid Lovable preview URLs
+        const productionUrl = 'https://balizacerta.lovable.app';
+        
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: data.email,
           password: data.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${productionUrl}/auth/callback`,
             data: {
               first_name: data.firstName,
               last_name: data.lastName,
