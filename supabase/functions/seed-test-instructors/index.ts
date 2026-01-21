@@ -1,8 +1,39 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Security: Require admin authentication for this development-only function
+const validateAdminAccess = async (req: Request, supabaseAdmin: SupabaseClient) => {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    return { error: 'Não autorizado: token de acesso ausente', status: 401 };
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  
+  if (error || !user) {
+    return { error: 'Não autorizado: token inválido', status: 401 };
+  }
+
+  // Check if user has admin role using raw query since RPC typing is strict
+  const { data: roleData } = await supabaseAdmin
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('role', 'admin')
+    .maybeSingle();
+  
+  if (!roleData) {
+    console.warn(`[SECURITY] Non-admin user ${user.id} attempted to access seed function`);
+    return { error: 'Acesso negado: apenas administradores podem executar esta função', status: 403 };
+  }
+
+  console.log(`[SECURITY] Admin access granted for user ${user.id}`);
+  return { user };
 };
 
 Deno.serve(async (req) => {
@@ -10,14 +41,23 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
+  // SECURITY: Validate admin access before proceeding
+  const authResult = await validateAdminAccess(req, supabaseAdmin);
+  if ('error' in authResult) {
+    return new Response(JSON.stringify({ success: false, error: authResult.error }), {
+      status: authResult.status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
-    console.log('Starting seed-test-instructors...');
-    
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    console.log('Starting seed-test-instructors (admin authenticated)...');
 
     const testInstructors = [
       {
