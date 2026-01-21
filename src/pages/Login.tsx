@@ -208,8 +208,11 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      // Use production URL for email redirect to avoid Lovable preview URLs
+      const productionUrl = 'https://balizacerta.lovable.app';
+      
       const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+        redirectTo: `${productionUrl}/auth/callback?type=recovery`,
       });
 
       if (error) {

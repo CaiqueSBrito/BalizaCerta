@@ -58,11 +58,14 @@ const StudentRegistrationForm = () => {
       console.log('[StudentRegistration] Starting signup for:', sanitizedEmail);
 
       // Create user in Supabase Auth
+      // Use production URL for email redirect to avoid Lovable preview URLs
+      const productionUrl = 'https://balizacerta.lovable.app';
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: sanitizedEmail,
         password: data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${productionUrl}/auth/callback`,
           data: {
             first_name: sanitizedFirstName,
             last_name: sanitizedLastName,
