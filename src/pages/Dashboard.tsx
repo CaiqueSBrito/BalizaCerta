@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
@@ -9,6 +9,8 @@ import Footer from '@/components/Footer';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { InstructorSidebar } from '@/components/instructor/InstructorSidebar';
 import { InstructorAgenda } from '@/components/instructor/InstructorAgenda';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
+import { WelcomeProModal } from '@/components/WelcomeProModal';
 
 type ActiveModule = 'agenda' | 'alunos' | 'evolucao' | 'configuracoes';
 
@@ -28,10 +30,24 @@ interface InstructorData {
 const Dashboard = () => {
   const { user, isLoading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [profile, setProfile] = useState<InstructorProfile | null>(null);
   const [instructorData, setInstructorData] = useState<InstructorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeModule, setActiveModule] = useState<ActiveModule>('agenda');
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+  // Check for payment success from Stripe redirect
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus === 'success') {
+      toast.success('Parabéns! 🎉', {
+        description: 'Seu pagamento foi processado. Bem-vindo ao Instrutor Pro!',
+      });
+      // Clear the URL params
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -75,7 +91,15 @@ const Dashboard = () => {
             navigate('/selecionar-plano', { replace: true });
             return;
           }
+          
           setInstructorData(instructorInfo as InstructorData);
+          
+          // Show welcome modal for free plan users on first dashboard visit
+          const hasSeenWelcome = localStorage.getItem(`welcome_modal_${user.id}`);
+          if (instructorInfo.plan === 'free' && !hasSeenWelcome) {
+            setShowWelcomeModal(true);
+            localStorage.setItem(`welcome_modal_${user.id}`, 'true');
+          }
         }
       } catch (error) {
         console.error('[Dashboard] Erro inesperado:', error);
@@ -179,12 +203,24 @@ const Dashboard = () => {
             </div>
 
             {/* Scrollable content area */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
+              {/* Upgrade Banner for Free Users */}
+              {instructorData?.plan === 'free' && (
+                <UpgradeBanner />
+              )}
+              
               {renderModule()}
             </div>
           </div>
         </SidebarProvider>
       </main>
+
+      {/* Welcome Modal for First-time Free Users */}
+      <WelcomeProModal
+        open={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        instructorName={profile?.first_name || undefined}
+      />
 
       {/* Footer - Always at bottom, z-index higher than sidebar */}
       <div className="relative z-50">

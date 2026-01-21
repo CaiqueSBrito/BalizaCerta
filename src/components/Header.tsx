@@ -8,25 +8,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, X, Home, User, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react';
+import { Menu, X, Home, User, LogOut, LayoutDashboard, ChevronDown, Crown, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useStripeCheckout } from '@/hooks/useStripeCheckout';
 import { toast } from 'sonner';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userType, setUserType] = useState<string | null>(null);
+  const [instructorPlan, setInstructorPlan] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isLoading, signOut } = useAuth();
+  const { startCheckout, isLoading: isCheckoutLoading } = useStripeCheckout();
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Buscar tipo de usuário quando logado
+  // Buscar tipo de usuário e plano quando logado
   useEffect(() => {
-    const fetchUserType = async () => {
+    const fetchUserData = async () => {
       if (!user) {
         setUserType(null);
+        setInstructorPlan(null);
         return;
       }
 
@@ -37,10 +41,23 @@ const Header = () => {
         .maybeSingle();
 
       setUserType(profile?.user_type || null);
+
+      // Se for instrutor, buscar plano
+      if (profile?.user_type === 'instructor') {
+        const { data: instructor } = await supabase
+          .from('instructors')
+          .select('plan')
+          .eq('profile_id', user.id)
+          .maybeSingle();
+        
+        setInstructorPlan(instructor?.plan || null);
+      }
     };
 
-    fetchUserType();
+    fetchUserData();
   }, [user]);
+
+  const showUpgradeButton = userType === 'instructor' && instructorPlan === 'free';
 
   const handleLogout = async () => {
     await signOut();
@@ -110,34 +127,53 @@ const Header = () => {
             {isLoading ? (
               <div className="w-24 h-10 bg-muted animate-pulse rounded-md" />
             ) : user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="default" 
-                    className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold shadow-md gap-2"
+              <>
+                {/* Upgrade Button for Free Instructors */}
+                {showUpgradeButton && (
+                  <Button
+                    onClick={startCheckout}
+                    disabled={isCheckoutLoading}
+                    variant="outline"
+                    className="border-accent text-accent hover:bg-accent hover:text-accent-foreground font-semibold gap-2"
                   >
-                    <User size={18} />
-                    Meu Painel
-                    <ChevronDown size={16} />
+                    {isCheckoutLoading ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Crown size={16} />
+                    )}
+                    Seja Pro 🚀
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem asChild>
-                    <Link to={getDashboardPath()} className="flex items-center gap-2 cursor-pointer">
-                      <LayoutDashboard size={16} />
-                      {getDashboardLabel()}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
-                  >
-                    <LogOut size={16} />
-                    Sair
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                )}
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="default" 
+                      className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold shadow-md gap-2"
+                    >
+                      <User size={18} />
+                      Meu Painel
+                      <ChevronDown size={16} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link to={getDashboardPath()} className="flex items-center gap-2 cursor-pointer">
+                        <LayoutDashboard size={16} />
+                        {getDashboardLabel()}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                    >
+                      <LogOut size={16} />
+                      Sair
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : (
               <>
                 <Button variant="ghost" className="font-medium" asChild>
@@ -199,6 +235,26 @@ const Header = () => {
                   <div className="w-full h-10 bg-muted animate-pulse rounded-md" />
                 ) : user ? (
                   <>
+                    {/* Mobile Upgrade Button */}
+                    {showUpgradeButton && (
+                      <Button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          startCheckout();
+                        }}
+                        disabled={isCheckoutLoading}
+                        variant="outline"
+                        className="justify-start border-accent text-accent hover:bg-accent hover:text-accent-foreground font-semibold gap-2"
+                      >
+                        {isCheckoutLoading ? (
+                          <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                          <Crown size={18} />
+                        )}
+                        Seja Pro 🚀
+                      </Button>
+                    )}
+                    
                     <Button 
                       className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold justify-start gap-2" 
                       asChild
