@@ -16,6 +16,7 @@ import AuthCallback from "./pages/AuthCallback";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import AlunoDashboard from "./pages/AlunoDashboard";
+import SelecionarPlano from "./pages/SelecionarPlano";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/cadastro-aluno" element={<CadastroAluno />} />
             <Route path="/cadastro-instrutor" element={<InstructorRegister />} />
             <Route path="/cadastro-sucesso" element={<CadastroSucesso />} />
+            <Route path="/selecionar-plano" element={<SelecionarPlano />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/login" element={<Login />} />
             <Route 

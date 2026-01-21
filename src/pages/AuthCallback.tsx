@@ -129,7 +129,7 @@ const AuthCallback = () => {
           
           const { data: instructor, error: instructorError } = await supabase
             .from('instructors')
-            .select('id')
+            .select('id, plan_selected_at')
             .eq('profile_id', userId)
             .maybeSingle();
 
@@ -147,7 +147,16 @@ const AuthCallback = () => {
             return;
           }
 
-          // Instrutor com registro completo
+          // Verificar se já selecionou plano
+          if (!instructor.plan_selected_at) {
+            toast.success('Email confirmado!', {
+              description: 'Escolha seu plano para começar.',
+            });
+            navigate('/selecionar-plano');
+            return;
+          }
+
+          // Instrutor com registro completo e plano selecionado
           toast.success('Email confirmado com sucesso!', {
             description: 'Bem-vindo ao BalizaCerta!',
           });

@@ -63,13 +63,18 @@ const Dashboard = () => {
         // Buscar dados do instrutor
         const { data: instructorInfo, error: instructorError } = await supabase
           .from('instructors')
-          .select('rating, review_count, is_verified, plan')
+          .select('rating, review_count, is_verified, plan, plan_selected_at')
           .eq('profile_id', user.id)
           .single();
 
         if (instructorError) {
           console.error('[Dashboard] Erro ao buscar dados de instrutor:', instructorError);
         } else {
+          // Se não selecionou plano, redireciona
+          if (!instructorInfo.plan_selected_at) {
+            navigate('/selecionar-plano', { replace: true });
+            return;
+          }
           setInstructorData(instructorInfo as InstructorData);
         }
       } catch (error) {

@@ -170,7 +170,7 @@ const Login = () => {
       // Instrutor - verificar se tem cadastro completo
       const { data: instructorRow, error: instructorError } = await supabase
         .from('instructors')
-        .select('id')
+        .select('id, plan_selected_at')
         .eq('profile_id', userId)
         .maybeSingle();
 
@@ -185,6 +185,15 @@ const Login = () => {
           description: 'Encontramos sua conta, mas faltam dados do instrutor. Complete o cadastro para continuar.',
         });
         navigate('/cadastro-instrutor');
+        return;
+      }
+
+      // Verificar se já selecionou plano
+      if (!instructorRow.plan_selected_at) {
+        toast.info('Escolha seu plano', {
+          description: 'Complete a última etapa do cadastro escolhendo seu plano.',
+        });
+        navigate('/selecionar-plano');
         return;
       }
 

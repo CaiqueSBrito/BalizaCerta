@@ -30,7 +30,8 @@ const InstructorRegister = () => {
 
   const handleSuccess = () => {
     if (isCompletingRegistration) {
-      navigate('/dashboard');
+      // Após completar cadastro via email callback, vai para seleção de plano
+      navigate('/selecionar-plano');
     } else {
       navigate('/cadastro-sucesso');
     }

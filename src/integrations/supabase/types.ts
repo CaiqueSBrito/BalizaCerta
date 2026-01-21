@@ -70,6 +70,7 @@ export type Database = {
           is_active: boolean | null
           is_verified: boolean | null
           plan: Database["public"]["Enums"]["instructor_plan"]
+          plan_selected_at: string | null
           price_per_hour: number
           profile_id: string
           rating: number | null
@@ -90,6 +91,7 @@ export type Database = {
           is_active?: boolean | null
           is_verified?: boolean | null
           plan?: Database["public"]["Enums"]["instructor_plan"]
+          plan_selected_at?: string | null
           price_per_hour?: number
           profile_id: string
           rating?: number | null
@@ -110,6 +112,7 @@ export type Database = {
           is_active?: boolean | null
           is_verified?: boolean | null
           plan?: Database["public"]["Enums"]["instructor_plan"]
+          plan_selected_at?: string | null
           price_per_hour?: number
           profile_id?: string
           rating?: number | null
