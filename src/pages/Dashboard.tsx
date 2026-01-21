@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Crown } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
@@ -11,6 +11,7 @@ import { InstructorSidebar } from '@/components/instructor/InstructorSidebar';
 import { InstructorAgenda } from '@/components/instructor/InstructorAgenda';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
 import { WelcomeProModal } from '@/components/WelcomeProModal';
+import { useInstructorPlan } from '@/hooks/useInstructorPlan';
 
 type ActiveModule = 'agenda' | 'alunos' | 'evolucao' | 'configuracoes';
 
@@ -20,34 +21,43 @@ interface InstructorProfile {
   avatar_url: string | null;
 }
 
-interface InstructorData {
-  rating: number | null;
-  review_count: number | null;
-  is_verified: boolean | null;
-  plan: 'free' | 'pro';
-}
-
 const Dashboard = () => {
   const { user, isLoading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [profile, setProfile] = useState<InstructorProfile | null>(null);
-  const [instructorData, setInstructorData] = useState<InstructorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeModule, setActiveModule] = useState<ActiveModule>('agenda');
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showProWelcome, setShowProWelcome] = useState(false);
+  
+  // Real-time subscription to plan changes
+  const { planData, isPro, isFree, isVerified, refetch: refetchPlan } = useInstructorPlan();
 
   // Check for payment success from Stripe redirect
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     if (paymentStatus === 'success') {
+      setShowProWelcome(true);
       toast.success('Parabéns! 🎉', {
         description: 'Seu pagamento foi processado. Bem-vindo ao Instrutor Pro!',
       });
-      // Clear the URL params
+      // Clear the URL params and refetch plan data
       window.history.replaceState({}, '', '/dashboard');
+      refetchPlan();
     }
-  }, [searchParams]);
+  }, [searchParams, refetchPlan]);
+
+  // Show welcome modal for free plan users on first dashboard visit
+  useEffect(() => {
+    if (user && planData && isFree) {
+      const hasSeenWelcome = localStorage.getItem(`welcome_modal_${user.id}`);
+      if (!hasSeenWelcome) {
+        setShowWelcomeModal(true);
+        localStorage.setItem(`welcome_modal_${user.id}`, 'true');
+      }
+    }
+  }, [user, planData, isFree]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -76,10 +86,10 @@ const Dashboard = () => {
 
         setProfile(profileData);
 
-        // Buscar dados do instrutor
+        // Buscar dados do instrutor para verificar se selecionou plano
         const { data: instructorInfo, error: instructorError } = await supabase
           .from('instructors')
-          .select('rating, review_count, is_verified, plan, plan_selected_at')
+          .select('plan_selected_at')
           .eq('profile_id', user.id)
           .single();
 
@@ -90,15 +100,6 @@ const Dashboard = () => {
           if (!instructorInfo.plan_selected_at) {
             navigate('/selecionar-plano', { replace: true });
             return;
-          }
-          
-          setInstructorData(instructorInfo as InstructorData);
-          
-          // Show welcome modal for free plan users on first dashboard visit
-          const hasSeenWelcome = localStorage.getItem(`welcome_modal_${user.id}`);
-          if (instructorInfo.plan === 'free' && !hasSeenWelcome) {
-            setShowWelcomeModal(true);
-            localStorage.setItem(`welcome_modal_${user.id}`, 'true');
           }
         }
       } catch (error) {
@@ -187,8 +188,8 @@ const Dashboard = () => {
             onModuleChange={setActiveModule}
             instructorName={profile?.first_name || 'Instrutor'}
             avatarUrl={profile?.avatar_url || null}
-            plan={instructorData?.plan || 'free'}
-            isVerified={instructorData?.is_verified || false}
+            plan={planData?.plan || 'free'}
+            isVerified={isVerified}
             onSignOut={handleSignOut}
           />
           
@@ -197,15 +198,40 @@ const Dashboard = () => {
             {/* Dashboard sub-header */}
             <div className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center px-4 md:px-6 shrink-0">
               <SidebarTrigger className="mr-4" />
-              <div className="text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 Olá, <span className="font-medium text-foreground">{profile?.first_name || 'Instrutor'}</span>!
+                {isPro && (
+                  <span className="flex items-center gap-1 text-accent font-medium">
+                    <Crown size={14} />
+                    Pro
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Scrollable content area */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
+              {/* Pro Welcome Message */}
+              {showProWelcome && (
+                <div className="bg-gradient-to-r from-accent/20 to-primary/20 border border-accent/30 rounded-lg p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Crown className="text-accent" size={24} />
+                    <div>
+                      <p className="font-semibold text-foreground">Bem-vindo ao Plano Pro! 🎉</p>
+                      <p className="text-sm text-muted-foreground">Agora você tem acesso a todos os recursos premium.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowProWelcome(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              
               {/* Upgrade Banner for Free Users */}
-              {instructorData?.plan === 'free' && (
+              {isFree && (
                 <UpgradeBanner />
               )}
               

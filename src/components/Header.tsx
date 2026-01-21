@@ -57,6 +57,33 @@ const Header = () => {
     fetchUserData();
   }, [user]);
 
+  // Real-time subscription to instructor plan changes (for Pro upgrade in real-time)
+  useEffect(() => {
+    if (!user || userType !== 'instructor') return;
+
+    const channel = supabase
+      .channel(`header-instructor-plan-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'instructors',
+          filter: `profile_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[Header] Real-time plan update:', payload);
+          const newData = payload.new as { plan: string };
+          setInstructorPlan(newData.plan);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, userType]);
+
   const showUpgradeButton = userType === 'instructor' && instructorPlan === 'free';
 
   const handleLogout = async () => {
