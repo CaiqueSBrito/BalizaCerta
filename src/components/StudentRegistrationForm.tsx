@@ -55,6 +55,8 @@ const StudentRegistrationForm = () => {
       const sanitizedWhatsApp = sanitizeWhatsApp(data.whatsapp);
       const sanitizedDifficulties = data.difficulties ? sanitizeText(data.difficulties) : null;
 
+      console.log('[StudentRegistration] Starting signup for:', sanitizedEmail);
+
       // Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: sanitizedEmail,
@@ -70,27 +72,67 @@ const StudentRegistrationForm = () => {
         },
       });
 
+      console.log('[StudentRegistration] SignUp response:', { 
+        user: authData?.user?.id, 
+        session: !!authData?.session,
+        identities: authData?.user?.identities?.length,
+        error: authError 
+      });
+
+      // Handle auth errors
       if (authError) {
         console.error('[StudentRegistration] Auth error:', authError);
-        toast.error(mapErrorToUserMessage(authError));
+        
+        // Map specific Supabase auth errors to Portuguese
+        let errorMessage = 'Erro ao criar conta. Tente novamente.';
+        
+        if (authError.message?.includes('User already registered')) {
+          errorMessage = 'Este email já está cadastrado. Faça login ou recupere sua senha.';
+        } else if (authError.message?.includes('Password should be at least')) {
+          errorMessage = 'A senha deve ter no mínimo 6 caracteres.';
+        } else if (authError.message?.includes('Email rate limit exceeded')) {
+          errorMessage = 'Limite de tentativas atingido. Aguarde alguns minutos.';
+        } else if (authError.message?.includes('Invalid email')) {
+          errorMessage = 'Email inválido. Verifique e tente novamente.';
+        } else if (authError.status === 429) {
+          errorMessage = 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.';
+        } else {
+          errorMessage = mapErrorToUserMessage(authError);
+        }
+        
+        toast.error(errorMessage);
         return;
       }
 
       if (!authData.user) {
+        console.error('[StudentRegistration] No user returned from signup');
         toast.error('Erro ao criar conta. Tente novamente.');
         return;
       }
 
-      // Check if email confirmation is required
+      // CRITICAL: Detect duplicate email (user exists but identities is empty)
+      // Supabase returns a "fake" success with identities: [] for existing emails
+      if (authData.user.identities && authData.user.identities.length === 0) {
+        console.warn('[StudentRegistration] Duplicate email detected - identities array is empty');
+        toast.error('Este email já está cadastrado. Faça login ou use "Esqueci minha senha".');
+        return;
+      }
+
+      // Check if email confirmation is required (no session but user exists)
       if (authData.user && !authData.session) {
-        // Email confirmation required
-        toast.success('Conta criada! Verifique seu email para confirmar o cadastro.');
+        console.log('[StudentRegistration] Email confirmation required, user created:', authData.user.id);
+        toast.success('Conta criada! Verifique seu email para confirmar o cadastro.', {
+          description: 'Procure também na pasta de spam.',
+          duration: 8000,
+        });
         setIsSuccess(true);
         return;
       }
 
-      // If we have a session (email confirmation disabled), insert student data
+      // If we have a session (email confirmation disabled), insert student data immediately
       if (authData.session) {
+        console.log('[StudentRegistration] Session available, inserting student data');
+        
         // Insert into students table
         const { error: studentError } = await supabase
           .from('students')
@@ -103,7 +145,12 @@ const StudentRegistrationForm = () => {
 
         if (studentError) {
           console.error('[StudentRegistration] Student insert error:', studentError);
-          // Don't fail the entire registration, the data can be added later
+          // Show specific RLS error
+          if (studentError.message?.includes('row-level security')) {
+            toast.error('Erro de permissão ao salvar dados. Entre em contato com o suporte.');
+          }
+        } else {
+          console.log('[StudentRegistration] Student data inserted successfully');
         }
 
         // Also update the profile with additional data for consistency
@@ -120,7 +167,9 @@ const StudentRegistrationForm = () => {
         }
 
         setIsSuccess(true);
-        toast.success('Bem-vindo ao BalizaCerta! Agora já pode escolher o seu instrutor ideal.');
+        toast.success('Bem-vindo ao BalizaCerta!', {
+          description: 'Sua conta foi criada com sucesso.',
+        });
         
         // Redirect to home after a brief delay
         setTimeout(() => {
@@ -129,7 +178,7 @@ const StudentRegistrationForm = () => {
       }
     } catch (error) {
       console.error('[StudentRegistration] Unexpected error:', error);
-      toast.error(mapErrorToUserMessage(error));
+      toast.error('Erro inesperado. Tente novamente em alguns instantes.');
     } finally {
       setIsLoading(false);
     }
