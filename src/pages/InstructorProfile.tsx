@@ -21,6 +21,7 @@ import Footer from '@/components/Footer';
 import { useInstructor } from '@/hooks/useInstructors';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { BookingForm } from '@/components/instructor/BookingForm';
 
 // Mock reviews - in production these would come from a reviews table
 const mockReviews = [
@@ -345,8 +346,9 @@ const InstructorProfile = () => {
             </div>
 
             {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <div className={`bg-card rounded-2xl p-6 border sticky top-28 ${
+            <div className="lg:col-span-1 space-y-6">
+              {/* Pricing Card */}
+              <div className={`bg-card rounded-2xl p-6 border ${
                 isPro 
                   ? 'border-accent shadow-lg shadow-accent/10' 
                   : 'border-border'
@@ -393,18 +395,15 @@ const InstructorProfile = () => {
                   )}
                 </div>
 
-                {/* CTA Button */}
+                {/* Quick Contact Button */}
                 <Button 
                   onClick={handleWhatsAppContact}
                   disabled={isContactLoading}
-                  className={`w-full h-14 text-lg font-bold gap-2 ${
-                    isPro 
-                      ? 'bg-accent text-accent-foreground hover:bg-accent/90' 
-                      : 'bg-verified text-verified-foreground hover:bg-verified/90'
-                  }`}
+                  variant="outline"
+                  className="w-full h-12 gap-2"
                 >
-                  <MessageCircle size={22} />
-                  {isContactLoading ? 'Abrindo...' : 'Contatar via WhatsApp'}
+                  <MessageCircle size={18} />
+                  {isContactLoading ? 'Abrindo...' : 'Contato rápido via WhatsApp'}
                 </Button>
 
                 {/* Trust indicators */}
@@ -413,6 +412,16 @@ const InstructorProfile = () => {
                     🔒 Contato seguro • Resposta em até 24h
                   </p>
                 </div>
+              </div>
+
+              {/* Booking Form - New Component */}
+              <div className="sticky top-28">
+                <BookingForm
+                  instructorId={instructor.id}
+                  instructorName={displayName}
+                  pricePerHour={instructor.price_per_hour || 0}
+                  isPro={isPro}
+                />
               </div>
             </div>
           </div>
