@@ -182,6 +182,33 @@ export type Database = {
         }
         Relationships: []
       }
+      students: {
+        Row: {
+          created_at: string
+          dificuldades: string | null
+          id: string
+          tem_veiculo: boolean
+          updated_at: string
+          whatsapp: string
+        }
+        Insert: {
+          created_at?: string
+          dificuldades?: string | null
+          id: string
+          tem_veiculo?: boolean
+          updated_at?: string
+          whatsapp: string
+        }
+        Update: {
+          created_at?: string
+          dificuldades?: string | null
+          id?: string
+          tem_veiculo?: boolean
+          updated_at?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -232,6 +259,13 @@ export type Database = {
     }
     Functions: {
       contact_instructor: { Args: { p_instructor_id: string }; Returns: string }
+      get_connected_student_info: {
+        Args: { p_student_id: string }
+        Returns: {
+          dificuldades: string
+          whatsapp: string
+        }[]
+      }
       get_instructor_by_id: {
         Args: { p_instructor_id: string }
         Returns: {
