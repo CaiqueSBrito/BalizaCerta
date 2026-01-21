@@ -134,9 +134,11 @@ export type Database = {
           avatar_url: string | null
           cpf: string | null
           created_at: string
+          difficulties: string | null
           email: string
           first_name: string | null
           full_name: string
+          has_vehicle: boolean | null
           id: string
           last_name: string | null
           phone: string | null
@@ -149,9 +151,11 @@ export type Database = {
           avatar_url?: string | null
           cpf?: string | null
           created_at?: string
+          difficulties?: string | null
           email: string
           first_name?: string | null
           full_name: string
+          has_vehicle?: boolean | null
           id: string
           last_name?: string | null
           phone?: string | null
@@ -164,9 +168,11 @@ export type Database = {
           avatar_url?: string | null
           cpf?: string | null
           created_at?: string
+          difficulties?: string | null
           email?: string
           first_name?: string | null
           full_name?: string
+          has_vehicle?: boolean | null
           id?: string
           last_name?: string | null
           phone?: string | null

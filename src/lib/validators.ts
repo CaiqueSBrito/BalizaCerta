@@ -167,3 +167,58 @@ export const instructorRegistrationSchema = z.object({
 });
 
 export type InstructorRegistrationData = z.infer<typeof instructorRegistrationSchema>;
+
+// Schema de validação para cadastro de aluno
+export const studentRegistrationSchema = z.object({
+  firstName: z
+    .string()
+    .trim()
+    .min(2, 'Nome deve ter pelo menos 2 caracteres')
+    .max(50, 'Nome deve ter no máximo 50 caracteres')
+    .regex(/^[a-zA-ZÀ-ÿ\s]+$/, 'Nome deve conter apenas letras'),
+  
+  lastName: z
+    .string()
+    .trim()
+    .min(2, 'Sobrenome deve ter pelo menos 2 caracteres')
+    .max(50, 'Sobrenome deve ter no máximo 50 caracteres')
+    .regex(/^[a-zA-ZÀ-ÿ\s]+$/, 'Sobrenome deve conter apenas letras'),
+  
+  email: z
+    .string()
+    .trim()
+    .email('Email inválido')
+    .max(255, 'Email deve ter no máximo 255 caracteres'),
+  
+  whatsapp: z
+    .string()
+    .trim()
+    .refine((val) => {
+      const clean = val.replace(/[^\d]/g, '');
+      return clean.length >= 10 && clean.length <= 11;
+    }, 'WhatsApp deve ter DDD + número (10 ou 11 dígitos)'),
+  
+  password: z
+    .string()
+    .min(8, 'Senha deve ter pelo menos 8 caracteres')
+    .max(128, 'Senha deve ter no máximo 128 caracteres')
+    .refine((val) => /[A-Z]/.test(val), 'Senha deve conter pelo menos uma letra maiúscula')
+    .refine((val) => /[a-z]/.test(val), 'Senha deve conter pelo menos uma letra minúscula')
+    .refine((val) => /[0-9]/.test(val), 'Senha deve conter pelo menos um número'),
+  
+  confirmPassword: z.string(),
+  
+  // Campos opcionais
+  hasVehicle: z.boolean().optional().default(false),
+  
+  difficulties: z
+    .string()
+    .trim()
+    .max(500, 'Dificuldades deve ter no máximo 500 caracteres')
+    .optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'As senhas não coincidem',
+  path: ['confirmPassword'],
+});
+
+export type StudentRegistrationData = z.infer<typeof studentRegistrationSchema>;
