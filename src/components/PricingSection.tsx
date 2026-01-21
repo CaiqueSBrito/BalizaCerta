@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from "react-router-dom";
 import { Check, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +23,7 @@ const plans = [
   },
   {
     name: "PRO",
-    price: "R$ 39",
+    price: "R$ 79",
     period: "/mês",
     description: "Para profissionais de elite",
     popular: true,
@@ -125,9 +125,7 @@ const PricingSection = () => {
                       : "bg-primary text-primary-foreground hover:bg-primary/90"
                   }`}
                 >
-                  <Link to="/cadastro-instrutor">
-                    {plan.popular ? "Começar Agora" : "Criar Conta Grátis"}
-                  </Link>
+                  <Link to="/cadastro-instrutor">{plan.popular ? "Começar Agora" : "Criar Conta Grátis"}</Link>
                 </Button>
               </CardFooter>
             </Card>
