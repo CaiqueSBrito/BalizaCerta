@@ -21,6 +21,7 @@ import {
 import { studentRegistrationSchema, formatWhatsApp, type StudentRegistrationData } from '@/lib/validators';
 import { sanitizeName, sanitizeEmail, sanitizeWhatsApp, sanitizeText, mapErrorToUserMessage } from '@/lib/sanitize';
 import { supabase } from '@/integrations/supabase/client';
+import { upsertStudentRecord } from '@/lib/student-record';
 
 const StudentRegistrationForm = () => {
   const navigate = useNavigate();
@@ -71,6 +72,8 @@ const StudentRegistrationForm = () => {
             last_name: sanitizedLastName,
             user_type: 'student',
             whatsapp: sanitizedWhatsApp,
+              has_vehicle: data.hasVehicle || false,
+              difficulties: sanitizedDifficulties,
           },
         },
       });
@@ -136,15 +139,13 @@ const StudentRegistrationForm = () => {
       if (authData.session) {
         console.log('[StudentRegistration] Session available, inserting student data');
         
-        // Insert into students table
-        const { error: studentError } = await supabase
-          .from('students')
-          .insert({
-            id: authData.user.id,
-            whatsapp: sanitizedWhatsApp,
-            tem_veiculo: data.hasVehicle || false,
-            dificuldades: sanitizedDifficulties,
-          });
+        // Insert/update students table
+        const { error: studentError } = await upsertStudentRecord({
+          userId: authData.user.id,
+          whatsapp: sanitizedWhatsApp,
+          temVeiculo: data.hasVehicle || false,
+          dificuldades: sanitizedDifficulties,
+        });
 
         if (studentError) {
           console.error('[StudentRegistration] Student insert error:', studentError);

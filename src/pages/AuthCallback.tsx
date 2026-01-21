@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { mapErrorToUserMessage, sanitizeName, sanitizeWhatsApp, sanitizeAge } from '@/lib/sanitize';
+import { sanitizeName, sanitizeWhatsApp, sanitizeAge, sanitizeText } from '@/lib/sanitize';
+import { upsertStudentRecord } from '@/lib/student-record';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -78,7 +79,7 @@ const AuthCallback = () => {
         // Verificar/criar perfil
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('user_type')
+          .select('user_type, whatsapp, has_vehicle, difficulties')
           .eq('id', userId)
           .maybeSingle();
 
@@ -97,6 +98,8 @@ const AuthCallback = () => {
           const fullName = `${firstName} ${lastName}`.trim().slice(0, 100) || session.user.email?.slice(0, 100) || '';
           const whatsapp = metadata?.whatsapp ? sanitizeWhatsApp(String(metadata.whatsapp)) : null;
           const age = metadata?.age ? sanitizeAge(metadata.age) : null;
+          const hasVehicle = typeof metadata?.has_vehicle === 'boolean' ? metadata.has_vehicle : null;
+          const difficulties = metadata?.difficulties ? sanitizeText(String(metadata.difficulties)) : null;
           
           const { error: insertProfileError } = await supabase
             .from('profiles')
@@ -109,6 +112,8 @@ const AuthCallback = () => {
               user_type: metadata?.user_type === 'instructor' ? 'instructor' : 'student',
               whatsapp: whatsapp,
               age: age,
+              has_vehicle: hasVehicle,
+              difficulties: difficulties,
             });
 
           if (insertProfileError) {
@@ -151,6 +156,52 @@ const AuthCallback = () => {
         }
 
         // Usuário comum (aluno)
+        setStatus('Finalizando cadastro de aluno...');
+
+        // Garantir registro na tabela students (principalmente após confirmação de e-mail)
+        try {
+          const metadata = session.user.user_metadata || {};
+
+          const whatsappFromMeta = metadata.whatsapp ? sanitizeWhatsApp(String(metadata.whatsapp)) : null;
+          const whatsappFromProfile = profile?.whatsapp ? sanitizeWhatsApp(String(profile.whatsapp)) : null;
+          const whatsapp = whatsappFromMeta || whatsappFromProfile;
+
+          const hasVehicleFromMeta = typeof metadata.has_vehicle === 'boolean' ? metadata.has_vehicle : null;
+          const hasVehicleFromProfile = typeof profile?.has_vehicle === 'boolean' ? profile.has_vehicle : null;
+          const temVeiculo = Boolean(hasVehicleFromMeta ?? hasVehicleFromProfile ?? false);
+
+          const difficultiesFromMeta = metadata.difficulties ? sanitizeText(String(metadata.difficulties)) : null;
+          const difficultiesFromProfile = profile?.difficulties ? sanitizeText(String(profile.difficulties)) : null;
+          const dificuldades = difficultiesFromMeta || difficultiesFromProfile;
+
+          if (!whatsapp) {
+            throw new Error('WhatsApp não encontrado para criar registro de aluno');
+          }
+
+          const { error: studentUpsertError } = await upsertStudentRecord({
+            userId,
+            whatsapp,
+            temVeiculo,
+            dificuldades,
+          });
+
+          if (studentUpsertError) {
+            console.error('[AuthCallback] Erro ao inserir/atualizar students:', studentUpsertError);
+            toast.error('Não foi possível salvar seus dados de aluno', {
+              description: 'Tente fazer login novamente. Se o erro persistir, fale com o suporte.',
+            });
+            setTimeout(() => navigate('/login'), 2500);
+            return;
+          }
+        } catch (studentErr) {
+          console.error('[AuthCallback] Erro ao finalizar cadastro do aluno:', studentErr);
+          toast.error('Não foi possível finalizar seu cadastro', {
+            description: 'Por favor, faça login novamente.',
+          });
+          setTimeout(() => navigate('/login'), 2500);
+          return;
+        }
+
         toast.success('Email confirmado com sucesso!', {
           description: 'Bem-vindo ao BalizaCerta!',
         });
