@@ -6,10 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Mail, Lock, Car } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Mail, Lock, Car, GraduationCap } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { mapErrorToUserMessage, sanitizeEmail } from '@/lib/sanitize';
+import { mapErrorToUserMessage } from '@/lib/sanitize';
+
+type UserTab = 'student' | 'instructor';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -17,9 +20,9 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [activeTab, setActiveTab] = useState<UserTab>('student');
 
   useEffect(() => {
-    // Se já estiver logado, evita mostrar a tela de login.
     const redirectIfLoggedIn = async () => {
       const { data } = await supabase.auth.getSession();
       const session = data.session;
@@ -28,7 +31,6 @@ const Login = () => {
         return;
       }
 
-      // Se tiver perfil de instrutor, vai direto para o dashboard.
       const { data: profile } = await supabase
         .from('profiles')
         .select('user_type')
@@ -38,8 +40,7 @@ const Login = () => {
       if (profile?.user_type === 'instructor') {
         navigate('/dashboard', { replace: true });
       } else if (profile?.user_type === 'student') {
-        // Aluno logado vai para a home
-        navigate('/', { replace: true });
+        navigate('/aluno-dashboard', { replace: true });
       } else {
         setIsCheckingSession(false);
       }
@@ -51,7 +52,6 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validação básica no frontend
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password;
 
@@ -60,7 +60,6 @@ const Login = () => {
       return;
     }
 
-    // Validação de formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedEmail)) {
       toast.error('E-mail inválido', {
@@ -69,7 +68,6 @@ const Login = () => {
       return;
     }
 
-    // Limitar tamanho do email
     if (trimmedEmail.length > 255) {
       toast.error('E-mail muito longo');
       return;
@@ -84,7 +82,6 @@ const Login = () => {
       });
 
       if (authError) {
-        // NUNCA expor mensagens de erro técnicas
         toast.error(mapErrorToUserMessage(authError));
         return;
       }
@@ -98,7 +95,6 @@ const Login = () => {
 
       const userId = authData.user.id;
 
-      // 1) Buscar perfil; se não existir, cria (isso corrige usuários antigos sem profile)
       const { data: existingProfile, error: profileFetchError } = await supabase
         .from('profiles')
         .select('user_type')
@@ -143,16 +139,35 @@ const Login = () => {
         userType = metaUserType;
       }
 
-      // 2) Bloquear aluno na área do instrutor
-      if (userType === 'student') {
-        toast.error('Área exclusiva para instrutores', {
-          description: 'Esta área é exclusiva para instrutores. Alunos podem acessar seus recursos na Home.',
+      // Validar tipo de usuário vs aba selecionada
+      if (activeTab === 'student' && userType === 'instructor') {
+        toast.warning('Parece que você é um instrutor', {
+          description: 'Por favor, use a aba "Sou Instrutor" ao lado.',
         });
         await supabase.auth.signOut();
+        setActiveTab('instructor');
         return;
       }
 
-      // 3) Se for instrutor, garantir que o cadastro esteja completo
+      if (activeTab === 'instructor' && userType === 'student') {
+        toast.warning('Parece que você é um aluno', {
+          description: 'Por favor, use a aba "Sou Aluno" ao lado.',
+        });
+        await supabase.auth.signOut();
+        setActiveTab('student');
+        return;
+      }
+
+      // Redirecionar baseado no tipo de usuário
+      if (userType === 'student') {
+        toast.success('Login realizado com sucesso!', {
+          description: 'Bem-vindo de volta, futuro motorista!',
+        });
+        navigate('/aluno-dashboard');
+        return;
+      }
+
+      // Instrutor - verificar se tem cadastro completo
       const { data: instructorRow, error: instructorError } = await supabase
         .from('instructors')
         .select('id')
@@ -198,7 +213,6 @@ const Login = () => {
       return;
     }
 
-    // Validação de formato
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedEmail)) {
       toast.error('E-mail inválido');
@@ -208,7 +222,6 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      // Use production URL for email redirect to avoid Lovable preview URLs
       const productionUrl = 'https://balizacerta.lovable.app';
       
       const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
@@ -217,7 +230,6 @@ const Login = () => {
 
       if (error) {
         console.error('[Login] Erro ao enviar reset:', error);
-        // Mensagem genérica por segurança (não revelar se email existe)
         toast.success('Se este e-mail estiver cadastrado, você receberá um link de redefinição.');
         return;
       }
@@ -233,7 +245,6 @@ const Login = () => {
     }
   };
 
-  // Mostra loading enquanto verifica sessão
   if (isCheckingSession) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -246,22 +257,53 @@ const Login = () => {
     );
   }
 
+  const isStudent = activeTab === 'student';
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <Header />
       
       <main className="flex-1 flex items-center justify-center pt-24 md:pt-28 pb-12 px-4">
         <Card className="w-full max-w-md shadow-xl border-primary/10">
-          <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-              <Car className="w-8 h-8 text-primary" />
+          <CardHeader className="text-center space-y-4 pb-2">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as UserTab)} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 h-12 bg-muted/50">
+                <TabsTrigger 
+                  value="student" 
+                  className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground"
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  Sou Aluno
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="instructor" 
+                  className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  <Car className="w-4 h-4" />
+                  Sou Instrutor
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
+              isStudent ? 'bg-secondary/20' : 'bg-primary/10'
+            }`}>
+              {isStudent ? (
+                <GraduationCap className="w-8 h-8 text-secondary" />
+              ) : (
+                <Car className="w-8 h-8 text-primary" />
+              )}
             </div>
+            
             <div>
               <CardTitle className="text-2xl font-bold text-foreground">
-                Área do Instrutor
+                {isStudent ? 'Área do Aluno' : 'Área do Instrutor'}
               </CardTitle>
               <CardDescription className="text-muted-foreground mt-2">
-                Faça login para acessar seu painel
+                {isStudent 
+                  ? 'Bem-vindo de volta, futuro motorista!' 
+                  : 'Faça login para acessar seu painel'
+                }
               </CardDescription>
             </div>
           </CardHeader>
@@ -321,7 +363,11 @@ const Login = () => {
             <CardFooter className="flex flex-col gap-4">
               <Button
                 type="submit"
-                className="w-full"
+                className={`w-full transition-colors ${
+                  isStudent 
+                    ? 'bg-secondary hover:bg-secondary/90 text-secondary-foreground' 
+                    : 'bg-primary hover:bg-primary/90'
+                }`}
                 disabled={isLoading}
                 size="lg"
               >
@@ -331,17 +377,19 @@ const Login = () => {
                     Entrando...
                   </>
                 ) : (
-                  'Entrar'
+                  isStudent ? 'Entrar como Aluno' : 'Entrar como Instrutor'
                 )}
               </Button>
 
               <p className="text-sm text-center text-muted-foreground">
                 Não tem uma conta?{' '}
                 <Link
-                  to="/cadastro-instrutor"
-                  className="text-primary hover:text-primary/80 hover:underline font-medium transition-colors"
+                  to={isStudent ? '/cadastro-aluno' : '/cadastro-instrutor'}
+                  className={`font-medium transition-colors hover:underline ${
+                    isStudent ? 'text-secondary hover:text-secondary/80' : 'text-primary hover:text-primary/80'
+                  }`}
                 >
-                  Cadastre-se
+                  {isStudent ? 'Cadastre-se como aluno' : 'Cadastre-se como instrutor'}
                 </Link>
               </p>
             </CardFooter>
