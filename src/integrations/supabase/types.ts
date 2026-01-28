@@ -258,6 +258,55 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          comment: string
+          created_at: string
+          id: string
+          instructor_id: string
+          rating: number
+          student_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          id?: string
+          instructor_id: string
+          rating: number
+          student_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          id?: string
+          instructor_id?: string
+          rating?: number
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructors_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           created_at: string
@@ -334,6 +383,10 @@ export type Database = {
       }
     }
     Functions: {
+      can_student_review_instructor: {
+        Args: { p_instructor_id: string }
+        Returns: boolean
+      }
       contact_instructor: { Args: { p_instructor_id: string }; Returns: string }
       downgrade_instructor_to_free: {
         Args: { p_user_id: string }

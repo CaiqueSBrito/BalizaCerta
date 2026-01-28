@@ -5,8 +5,6 @@ import {
   Crown, 
   MapPin, 
   Car, 
-  Calendar, 
-  Clock, 
   CheckCircle2,
   ChevronLeft,
   Shield,
@@ -18,31 +16,8 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useInstructor } from '@/hooks/useInstructors';
 import { BookingForm } from '@/components/instructor/BookingForm';
-
-// Mock reviews - in production these would come from a reviews table
-const mockReviews = [
-  {
-    id: '1',
-    author: 'Maria S.',
-    rating: 5,
-    date: '2025-01-10',
-    comment: 'Excelente profissional! Muito paciente e didático. Consegui passar na prova de primeira graças às dicas dele.',
-  },
-  {
-    id: '2',
-    author: 'João P.',
-    rating: 5,
-    date: '2025-01-05',
-    comment: 'Recomendo demais! As aulas são muito bem estruturadas e ele sabe exatamente como preparar para a prova do DETRAN.',
-  },
-  {
-    id: '3',
-    author: 'Ana C.',
-    rating: 4,
-    date: '2024-12-28',
-    comment: 'Ótima experiência! Me ajudou muito a superar o medo de dirigir. Atendimento pontual e profissional.',
-  },
-];
+import { ReviewForm } from '@/components/instructor/ReviewForm';
+import { ReviewsList } from '@/components/instructor/ReviewsList';
 
 const InstructorProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -240,39 +215,11 @@ const InstructorProfile = () => {
                 </div>
               )}
 
-              {/* Reviews */}
-              <div className={`bg-card rounded-2xl p-6 border ${isPro ? 'border-accent/30' : 'border-border'}`}>
-                <h2 className="text-xl font-bold text-foreground mb-6">Avaliações de Alunos</h2>
-                <div className="space-y-6">
-                  {mockReviews.map((review) => (
-                    <div key={review.id} className="border-b border-border pb-6 last:border-0 last:pb-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                            <span className="text-primary font-semibold">{review.author[0]}</span>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-foreground">{review.author}</p>
-                            <div className="flex items-center gap-1">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  size={12}
-                                  className={i < review.rating ? 'fill-star text-star' : 'text-muted'}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(review.date).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
-                      <p className="text-muted-foreground">{review.comment}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* Review Form */}
+              <ReviewForm instructorId={instructor.id} isPro={isPro} />
+
+              {/* Reviews List */}
+              <ReviewsList instructorId={instructor.id} isPro={isPro} />
             </div>
 
             {/* Sidebar - Booking Form Only */}
