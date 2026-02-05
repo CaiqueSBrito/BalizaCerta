@@ -18,6 +18,9 @@ import Dashboard from "./pages/Dashboard";
 import AlunoDashboard from "./pages/AlunoDashboard";
 import SelecionarPlano from "./pages/SelecionarPlano";
 import AdminPanel from "./pages/AdminPanel";
+import TermosDeUso from "./pages/TermosDeUso";
+import PoliticaDePrivacidade from "./pages/PoliticaDePrivacidade";
+import Reembolso from "./pages/Reembolso";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -42,6 +45,9 @@ const App = () => (
             <Route path="/selecionar-plano" element={<SelecionarPlano />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/termos-de-uso" element={<TermosDeUso />} />
+            <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidade />} />
+            <Route path="/reembolso" element={<Reembolso />} />
             <Route 
               path="/dashboard" 
               element={

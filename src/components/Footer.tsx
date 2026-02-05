@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const Footer = () => {
   return (
     <footer className="bg-primary py-12">
@@ -23,27 +25,43 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-primary-foreground mb-4">Links</h4>
             <ul className="space-y-2">
-              {["Como Funciona", "Para Instrutores", "Preços", "Blog"].map((link) => (
-                <li key={link}>
-                  <a href="#" className="text-primary-foreground/70 hover:text-accent transition-colors">
-                    {link}
-                  </a>
-                </li>
-              ))}
+              <li>
+                <Link to="/instrutores" className="text-primary-foreground/70 hover:text-accent transition-colors">
+                  Como Funciona
+                </Link>
+              </li>
+              <li>
+                <Link to="/planos-instrutor" className="text-primary-foreground/70 hover:text-accent transition-colors">
+                  Para Instrutores
+                </Link>
+              </li>
+              <li>
+                <Link to="/cadastro" className="text-primary-foreground/70 hover:text-accent transition-colors">
+                  Cadastre-se
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Legal */}
           <div>
-            <h4 className="font-semibold text-primary-foreground mb-4">Suporte</h4>
+            <h4 className="font-semibold text-primary-foreground mb-4">Legal</h4>
             <ul className="space-y-2">
-              {["Central de Ajuda", "Termos de Uso", "Política de Privacidade", "Contato"].map((link) => (
-                <li key={link}>
-                  <a href="#" className="text-primary-foreground/70 hover:text-accent transition-colors">
-                    {link}
-                  </a>
-                </li>
-              ))}
+              <li>
+                <Link to="/termos-de-uso" className="text-primary-foreground/70 hover:text-accent transition-colors">
+                  Termos de Uso
+                </Link>
+              </li>
+              <li>
+                <Link to="/politica-de-privacidade" className="text-primary-foreground/70 hover:text-accent transition-colors">
+                  Política de Privacidade
+                </Link>
+              </li>
+              <li>
+                <Link to="/reembolso" className="text-primary-foreground/70 hover:text-accent transition-colors">
+                  Cancelamento e Reembolso
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
